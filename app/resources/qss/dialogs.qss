@@ -1,0 +1,11 @@
+/* ═══════════════════════════════════════
+   DIALOGS — Aurora
+   ═══════════════════════════════════════ */
+
+QDialog {
+    background: transparent;
+}
+
+QMessageBox {
+    background-color: white;
+}

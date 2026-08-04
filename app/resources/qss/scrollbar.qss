@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════
+   SCROLLBAR — Aurora
+   ═══════════════════════════════════════ */
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(99, 102, 241, 0.4);
+    border-radius: 5px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(99, 102, 241, 0.7);
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    background: none;
+    border: none;
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+}
+
+QScrollBar::handle:horizontal {
+    background: rgba(99, 102, 241, 0.4);
+    border-radius: 5px;
+    min-width: 30px;
+}
