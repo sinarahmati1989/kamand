@@ -4,10 +4,10 @@ Application Constants
 
 # ══════════ Brand ══════════
 APP_NAME = "Device Manufacturing System"
-APP_NAME_FA = "سیستم مدیریت ساخت دستگاه"
+APP_NAME_FA = "سیستم مدیریت یکپارچه"
 BRAND_NAME = "کمند"                          # ← نام برند فارسی
 BRAND_NAME_EN = "Kamand"                     # ← نام برند انگلیسی
-BRAND_TAGLINE = "سیستم مدیریت ساخت دستگاه"   # ← شعار زیر لوگو
+BRAND_TAGLINE = "سیستم مدیریت یکپارچه"   # ← شعار زیر لوگو
 APP_CODENAME = "Aurora"                      # ← فقط اسم تم داخلی
 APP_VERSION = "1.0.0"
 

@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt, QTimer
 
 from app.config.logging_config import setup_logging
 from app.config.theme_loader import apply_theme
+from app.ui.font_manager import FontManager   # 🆕 اضافه شد
 from app.ui.auth.login_window import LoginWindow
 from app.ui.main_window import MainWindow
 from app.constants import BRAND_NAME
@@ -32,6 +33,10 @@ def main():
     app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
     app.setApplicationName(BRAND_NAME)
 
+    # 🆕 راه‌اندازی فونت پیش‌فرض (Vazirmatn)
+    chosen_font = FontManager.setup(app)
+    logger.info(f"فونت پیش‌فرض برنامه: {chosen_font}")
+
     apply_theme(app)
 
     from app.config.display import Display
@@ -42,22 +47,17 @@ def main():
 
     login = LoginWindow()
 
-    # نگهداری MainWindow در متغیر بیرونی که garbage نشه
     state = {"window": None}
 
     def on_login_success(user):
-        # کاملاً login رو ببند
         login.hide()
 
-        # ساخت MainWindow بدون parent
         window = MainWindow()
         state["window"] = window
 
-        # سایز صریح
         screen = app.primaryScreen().availableGeometry()
         window.setGeometry(screen)
 
-        # نمایش maximized
         window.showMaximized()
         window.raise_()
         window.activateWindow()

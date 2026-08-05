@@ -1,0 +1,74 @@
+/* ═══════════════════════════════════════
+   FONT — Vazirmatn (اعمال روی کل برنامه)
+   ═══════════════════════════════════════ */
+
+* {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+}
+
+QWidget {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-size: 13px;
+}
+
+QLabel {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+}
+
+QPushButton {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-weight: 600;
+}
+
+QLineEdit, QTextEdit, QPlainTextEdit,
+QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit,
+QCheckBox, QRadioButton {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-size: 13px;
+}
+
+QTableWidget, QTableView, QTreeWidget, QTreeView, QListWidget, QListView {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-size: 13px;
+}
+
+QHeaderView::section {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-weight: 700;
+}
+
+QMenu, QMenuBar {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-size: 13px;
+}
+
+QToolTip {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-size: 12px;
+    background-color: #1E293B;
+    color: #FFFFFF;
+    border: 1px solid #6366F1;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+QGroupBox {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+    font-weight: 700;
+}
+
+QTabWidget, QTabBar {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+}
+
+QMessageBox, QMessageBox QLabel, QMessageBox QPushButton {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+}
+
+QDialog {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+}
+
+QCalendarWidget, QCalendarWidget QAbstractItemView, QCalendarWidget QToolButton, QCalendarWidget QSpinBox {
+    font-family: "Vazirmatn", "Segoe UI", "Tahoma", "B Nazanin";
+}

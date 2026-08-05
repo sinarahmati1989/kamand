@@ -1,6 +1,6 @@
 """
-Kamand Login Window
-پنجره لاگین اصلی — کارت ثابت گرد
+Kamand Login Window — Professional Edition v3
+پنجره لاگین حرفه‌ای — با فونت Vazirmatn (سایز متعادل)
 """
 import logging
 from PySide6.QtWidgets import (
@@ -8,33 +8,80 @@ from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect, QApplication, QDialog
 )
 from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QColor, QKeyEvent
+from PySide6.QtGui import QColor, QKeyEvent, QPainter, QFont
+from PySide6.QtSvg import QSvgRenderer
 
 from app.ui.widgets.modern_input import ModernInput
-from app.ui.widgets.neon_button import NeonButton
+from app.ui.widgets.neon_button import PrimaryButton
 from app.ui.widgets.toast import Toast
+from app.ui.font_manager import FontManager
 from app.services.auth_service import AuthService
 from app.schemas.user_schema import UserLoginDTO, UserReadDTO
 from app.core.exceptions import AuthenticationError, ValidationError
 from app.constants import (
-    LOGIN_WIDTH, LOGIN_HEIGHT,
     BRAND_NAME, BRAND_TAGLINE, APP_VERSION,
 )
 
 logger = logging.getLogger(__name__)
 
 
+# ═══════════════════════════════════════════════════════════════
+# لوگو SVG — Hexagon مینیمال با گرادیان
+# ═══════════════════════════════════════════════════════════════
+
+LOGO_SVG = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <polygon points="50,8 87,29 87,71 50,92 13,71 13,29" 
+             fill="none" 
+             stroke="url(#grad)" 
+             stroke-width="4"
+             stroke-linejoin="round"/>
+    <polygon points="50,28 70,39 70,61 50,72 30,61 30,39" 
+             fill="url(#grad)"
+             opacity="0.9"/>
+    <circle cx="50" cy="50" r="6" fill="#FFFFFF"/>
+</svg>
+"""
+
+
+class LogoWidget(QWidget):
+    """ویجت لوگو SVG با اندازه ثابت"""
+
+    def __init__(self, size: int = 72, parent=None):
+        super().__init__(parent)
+        self._size = size
+        self.setFixedSize(size, size)
+        self._renderer = QSvgRenderer(LOGO_SVG.encode('utf-8'))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._renderer.render(painter)
+
+
+# ═══════════════════════════════════════════════════════════════
+# LoginWindow — پنجره اصلی
+# ═══════════════════════════════════════════════════════════════
+
 class LoginWindow(QDialog):
-    """پنجره لاگین با تم Aurora Glass — ثابت و گرد"""
+    """پنجره لاگین حرفه‌ای — تک‌ستونه با Card وسط"""
 
     login_success = Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("ورود به سیستم")
-        from app.config.display import Display
-        w, h = Display.login_size()
-        self.setFixedSize(w, h)
+        self.setWindowTitle("ورود به سامانه کمند")
+
+        # 🎯 اندازه متعادل و حرفه‌ای (نه خیلی بزرگ، نه خیلی کوچیک)
+        self.setFixedSize(390, 550)
+
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setObjectName("loginWindow")
 
@@ -43,6 +90,9 @@ class LoginWindow(QDialog):
             | Qt.WindowType.FramelessWindowHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        # فونت اصلی برنامه
+        self._font_family = FontManager.font_family()
 
         self._build_ui()
         self._center_on_screen()
@@ -57,174 +107,143 @@ class LoginWindow(QDialog):
     # ─────────────────────────── UI ──────────────────────────────────
 
     def _build_ui(self):
+        """ساخت UI اصلی — Card تک‌ستونه"""
+
+        # Card اصلی
         card = QWidget(self)
         card.setObjectName("loginCard")
         card.setGeometry(0, 0, self.width(), self.height())
         card.setStyleSheet("""
             #loginCard {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:1, y2:1,
-                    stop:0    #E0E7FF,
-                    stop:0.33 #EDE9FE,
-                    stop:0.66 #FCE7F3,
-                    stop:1    #DBEAFE
-                );
-                border-radius: 24px;
-                border: 1px solid rgba(255, 255, 255, 0.6);
+                background-color: #FFFFFF;
+                border-radius: 20px;
+                border: 1px solid #E2E8F0;
             }
         """)
 
+        # سایه نرم
         shadow = QGraphicsDropShadowEffect(card)
-        shadow.setBlurRadius(50)
-        shadow.setColor(QColor(99, 102, 241, 80))
-        shadow.setOffset(0, 12)
+        shadow.setBlurRadius(60)
+        shadow.setColor(QColor(99, 102, 241, 65))
+        shadow.setOffset(0, 15)
         card.setGraphicsEffect(shadow)
 
-        main_layout = QHBoxLayout(card)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        # Layout اصلی
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(42, 34, 42, 22)
+        layout.setSpacing(0)
 
-        main_layout.addWidget(self._build_left_panel(), 1)
-        main_layout.addWidget(self._build_right_panel(), 1)
+        # ─── 1. لوگو ───
+        logo_container = QHBoxLayout()
+        logo_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.logo = LogoWidget(size=68)
+        logo_container.addWidget(self.logo)
+        layout.addLayout(logo_container)
 
-    def _build_left_panel(self) -> QWidget:
-        panel = QWidget()
-        panel.setStyleSheet("background: transparent;")
+        layout.addSpacing(14)
 
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(40, 50, 40, 50)
-        layout.setSpacing(18)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        icon = QLabel("🏭")
-        icon.setStyleSheet("font-size: 84px; background: transparent;")
-        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        title = QLabel(BRAND_NAME)
-        title.setStyleSheet("""
-            font-size: 48px;
-            font-weight: 900;
-            color: #6366F1;
-            background: transparent;
-        """)
+        # ─── 2. عنوان اصلی ───
+        title = QLabel(f"سامانه {BRAND_NAME}")
+        title.setObjectName("loginTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        line = QLabel()
-        line.setFixedHeight(4)
-        line.setFixedWidth(70)
-        line.setStyleSheet("""
-            background: qlineargradient(
-                x1:0, y1:0, x2:1, y2:0,
-                stop:0 #6366F1, stop:0.5 #8B5CF6, stop:1 #EC4899
-            );
-            border-radius: 2px;
+        title.setStyleSheet(f"""
+            #loginTitle {{
+                font-family: "{self._font_family}";
+                font-size: 24px;
+                font-weight: 800;
+                color: #1E293B;
+                background: transparent;
+                letter-spacing: 0.3px;
+            }}
         """)
-        line_wrap = QHBoxLayout()
-        line_wrap.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        line_wrap.addWidget(line)
-
-        subtitle = QLabel(BRAND_TAGLINE)
-        subtitle.setStyleSheet("""
-            font-size: 16px;
-            color: #475569;
-            background: transparent;
-            font-weight: 600;
-        """)
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setWordWrap(True)
-
-        version = QLabel(f"نسخه {APP_VERSION}")
-        version.setStyleSheet(
-            "color: #94A3B8; font-size: 12px; background: transparent;"
-        )
-        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        layout.addStretch()
-        layout.addWidget(icon)
         layout.addWidget(title)
-        layout.addLayout(line_wrap)
-        layout.addWidget(subtitle)
-        layout.addStretch()
-        layout.addWidget(version)
 
-        return panel
+        layout.addSpacing(6)
 
-    def _build_right_panel(self) -> QWidget:
-        panel = QWidget()
-        panel.setStyleSheet("background: transparent;")
-
-        wrapper = QVBoxLayout(panel)
-        wrapper.setContentsMargins(20, 40, 40, 40)
-        wrapper.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        form_card = QWidget()
-        form_card.setObjectName("formCard")
-        form_card.setStyleSheet("""
-            #formCard {
-                background-color: rgba(255, 255, 255, 0.85);
-                border: 1px solid rgba(255, 255, 255, 0.7);
-                border-radius: 18px;
-            }
-        """)
-        form_card.setFixedWidth(340)
-
-        form_layout = QVBoxLayout(form_card)
-        form_layout.setContentsMargins(28, 28, 28, 28)
-        form_layout.setSpacing(16)
-
-        title = QLabel("ورود به سیستم")
-        title.setStyleSheet("""
-            font-size: 22px;
-            font-weight: 800;
-            color: #1E293B;
-            background: transparent;
-        """)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        subtitle = QLabel("لطفاً اطلاعات کاربری خود را وارد کنید")
-        subtitle.setStyleSheet("""
-            color: #64748B;
-            font-size: 12px;
-            background: transparent;
-        """)
+        # ─── 3. زیرعنوان ───
+        subtitle = QLabel(BRAND_TAGLINE)
+        subtitle.setObjectName("loginSubtitle")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet(f"""
+            #loginSubtitle {{
+                font-family: "{self._font_family}";
+                font-size: 12px;
+                color: #64748B;
+                background: transparent;
+                font-weight: 500;
+            }}
+        """)
+        subtitle.setWordWrap(True)
+        layout.addWidget(subtitle)
 
+        layout.addSpacing(28)
+
+        # ─── 4. فیلد نام کاربری ───
         self.username_input = ModernInput(
             label="نام کاربری",
             placeholder="نام کاربری خود را وارد کنید",
+            height=30,
         )
+        layout.addWidget(self.username_input)
+
+        layout.addSpacing(14)
+
+        # ─── 5. فیلد رمز عبور ───
         self.password_input = ModernInput(
             label="رمز عبور",
-            placeholder="••••••••",
+            placeholder="رمز عبور خود را وارد کنید",
             is_password=True,
+            height=30,
         )
+        layout.addWidget(self.password_input)
 
-        self.login_btn = NeonButton("ورود  ←")
+        layout.addSpacing(22)
+
+        # ─── 6. دکمه ورود ───
+        self.login_btn = PrimaryButton("ورود به سامانه")
         self.login_btn.clicked.connect(self._handle_login)
+        layout.addWidget(self.login_btn)
 
+        layout.addSpacing(10)
+
+        # ─── 7. لینک خروج (بلافاصله بعد از دکمه ورود) ───
         exit_lbl = QLabel("خروج از برنامه")
-        exit_lbl.setStyleSheet("""
-            color: #94A3B8;
-            font-size: 12px;
-            background: transparent;
-            padding: 5px;
-        """)
+        exit_lbl.setObjectName("exitLink")
         exit_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        exit_lbl.setStyleSheet(f"""
+            QLabel#exitLink {{
+                font-family: "{self._font_family}";
+                color: #64748B;
+                font-size: 12px;
+                background: transparent;
+                padding: 4px;
+                font-weight: 500;
+            }}
+            QLabel#exitLink:hover {{
+                color: #6366F1;
+            }}
+        """)
         exit_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
         exit_lbl.mousePressEvent = lambda e: QApplication.quit()
+        layout.addWidget(exit_lbl)
 
-        form_layout.addWidget(title)
-        form_layout.addWidget(subtitle)
-        form_layout.addSpacing(8)
-        form_layout.addWidget(self.username_input)
-        form_layout.addWidget(self.password_input)
-        form_layout.addSpacing(4)
-        form_layout.addWidget(self.login_btn)
-        form_layout.addSpacing(8)
-        form_layout.addWidget(exit_lbl)
+        # فضای انعطاف‌پذیر
+        layout.addStretch()
 
-        wrapper.addWidget(form_card, alignment=Qt.AlignmentFlag.AlignCenter)
-        return panel
+        # ─── 8. نسخه (کوچیک، پایین صفحه) ───
+        version = QLabel(f"v{APP_VERSION}")
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        version.setStyleSheet(f"""
+            QLabel {{
+                font-family: "{self._font_family}";
+                color: #CBD5E1;
+                font-size: 9px;
+                background: transparent;
+                font-weight: 400;
+                letter-spacing: 0.8px;
+            }}
+        """)
+        layout.addWidget(version)
 
     # ─────────────────────────── Events ──────────────────────────────
 
@@ -293,7 +312,7 @@ class LoginWindow(QDialog):
 
     def _reset_button(self):
         self.login_btn.setEnabled(True)
-        self.login_btn.setText("ورود  ←")
+        self.login_btn.setText("ورود به سامانه")
 
     def _on_success(self, user: UserReadDTO):
         self.login_success.emit(user)
@@ -308,6 +327,6 @@ class LoginWindow(QDialog):
         self._reset_button()
         self.username_input.set_focus()
 
-    # سازگاری با کد قدیمی
     def clear_fields(self):
+        """سازگاری با کد قدیمی"""
         self.reset_form()

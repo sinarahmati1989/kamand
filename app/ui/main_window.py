@@ -1,6 +1,6 @@
 """
 MainWindow — پنجره اصلی کمند
-Sidebar با اکاردئون هوشمند + Header + Content Stack
+طراحی حرفه‌ای Sidebar با آیکون‌های Material Design
 """
 import logging
 from PySide6.QtWidgets import (
@@ -9,73 +9,106 @@ from PySide6.QtWidgets import (
     QPushButton, QStackedWidget, QScrollArea,
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPainter
+from PySide6.QtSvg import QSvgRenderer
 
 from app.core.access_control import AccessControl
 from app.enums.roles import UserRole
 from app.constants import BRAND_NAME, APP_VERSION
 from app.config.display import Display
+from app.ui.icon_manager import IconManager
 
 logger = logging.getLogger(__name__)
 
 
-# ══════════════════════════════════════════════════════════════
-# اجزای Sidebar
-# ══════════════════════════════════════════════════════════════
+SIDEBAR_LOGO_SVG = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <polygon points="50,8 87,29 87,71 50,92 13,71 13,29"
+             fill="none"
+             stroke="url(#grad)"
+             stroke-width="5"
+             stroke-linejoin="round"/>
+    <polygon points="50,28 70,39 70,61 50,72 30,61 30,39"
+             fill="url(#grad)"
+             opacity="0.9"/>
+    <circle cx="50" cy="50" r="6" fill="#FFFFFF"/>
+</svg>
+"""
+
+
+class SidebarLogo(QWidget):
+    def __init__(self, size: int = 56, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(size, size)
+        self._renderer = QSvgRenderer(SIDEBAR_LOGO_SVG.encode('utf-8'))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._renderer.render(painter)
+
 
 class SidebarItem(QPushButton):
-    """آیتم داخل یک بخش (فرزند)"""
-
-    def __init__(self, icon: str, label: str, page_key: str, parent=None):
+    def __init__(self, icon_key: str, label: str, page_key: str, parent=None):
         super().__init__(parent)
         self.page_key = page_key
-        self.setText(f"    {icon}   {label}")
+        self.icon_key = icon_key
+        self.label_text = label
+
+        self.setText(f"   {label}")
         self.setObjectName("sidebarItem")
-        self.setFixedHeight(40)
         self.setCheckable(True)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setIcon(IconManager.get(icon_key, color=IconManager.COLOR_SECONDARY))
+        self.setIconSize(self._icon_size())
 
-        font = QFont()
-        font.setPointSize(10)
-        self.setFont(font)
+    def _icon_size(self):
+        from PySide6.QtCore import QSize
+        return QSize(20, 20)
 
     def set_active(self, active: bool):
         self.setChecked(active)
         self.setObjectName("sidebarItemActive" if active else "sidebarItem")
+        if active:
+            self.setIcon(IconManager.get(self.icon_key, color=IconManager.COLOR_ACTIVE))
+        else:
+            self.setIcon(IconManager.get(self.icon_key, color=IconManager.COLOR_SECONDARY))
         self.style().unpolish(self)
         self.style().polish(self)
 
 
 class SidebarSection(QWidget):
-    """بخش اکاردئون — عنوان قابل کلیک + آیتم‌های داخلی"""
-
     section_clicked = Signal(object)
 
-    def __init__(self, icon: str, title: str, section_key: str, parent=None):
+    def __init__(self, icon_key: str, title: str, section_key: str, parent=None):
         super().__init__(parent)
         self.section_key = section_key
+        self.icon_key = icon_key
+        self.title_text = title
         self._items: list[SidebarItem] = []
         self._is_expanded = False
 
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self._setup_ui(icon, title)
+        self._setup_ui()
 
-    def _setup_ui(self, icon: str, title: str):
+    def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
         self.header_btn = QPushButton()
         self.header_btn.setObjectName("sidebarSectionHeader")
-        self.header_btn.setFixedHeight(44)
         self.header_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.header_btn.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self._update_header_text(icon, title)
-
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        self.header_btn.setFont(font)
+        self._update_header()
 
         self.header_btn.clicked.connect(lambda: self.section_clicked.emit(self))
         layout.addWidget(self.header_btn)
@@ -83,17 +116,19 @@ class SidebarSection(QWidget):
         self.items_container = QWidget()
         self.items_container.setObjectName("sidebarSectionItems")
         self.items_layout = QVBoxLayout(self.items_container)
-        self.items_layout.setContentsMargins(0, 2, 0, 6)
+        self.items_layout.setContentsMargins(0, 4, 0, 6)
         self.items_layout.setSpacing(2)
         layout.addWidget(self.items_container)
 
-        self._icon = icon
-        self._title = title
         self.items_container.setVisible(False)
 
-    def _update_header_text(self, icon: str, title: str):
-        arrow = "▼" if self._is_expanded else "◀"
-        self.header_btn.setText(f"  {icon}   {title}      {arrow}")
+    def _update_header(self):
+        from PySide6.QtCore import QSize
+        arrow = "▼" if self._is_expanded else "▶"
+        self.header_btn.setText(f"   {self.title_text}      {arrow}")
+        color = IconManager.COLOR_PRIMARY if self._is_expanded else IconManager.COLOR_SECONDARY
+        self.header_btn.setIcon(IconManager.get(self.icon_key, color=color))
+        self.header_btn.setIconSize(QSize(20, 20))
 
     def add_item(self, item: SidebarItem):
         self._items.append(item)
@@ -108,67 +143,61 @@ class SidebarSection(QWidget):
     def set_expanded(self, expanded: bool):
         self._is_expanded = expanded
         self.items_container.setVisible(expanded)
-        self._update_header_text(self._icon, self._title)
-
         obj_name = "sidebarSectionHeaderActive" if expanded else "sidebarSectionHeader"
         self.header_btn.setObjectName(obj_name)
         self.header_btn.style().unpolish(self.header_btn)
         self.header_btn.style().polish(self.header_btn)
+        self._update_header()
 
     def is_expanded(self) -> bool:
         return self._is_expanded
 
 
-# ══════════════════════════════════════════════════════════════
-# Sidebar اصلی
-# ══════════════════════════════════════════════════════════════
-
 class Sidebar(QFrame):
-    """سایدبار اصلی با اکاردئون"""
-
     page_changed = Signal(str)
+    logout_clicked = Signal()
 
     STRUCTURE = [
-        ("item", "📊", "داشبورد اصلی", "dashboard", False),
+        ("item", "dashboard", "داشبورد اصلی", "dashboard", False),
 
-        ("section", "base_data", "📦", "داده‌های پایه", False, [
-            ("👥", "مشتریان",        "customers"),
-            ("🏭", "تأمین‌کنندگان",  "suppliers"),
-            ("💰", "انواع هزینه",    "costs"),
-            ("🔨", "عملیات ساخت",    "operations"),
-            ("🏢", "دپارتمان‌ها",    "departments"),
-            ("🔧", "مراکز کار",      "work_centers"),
-            ("🤖", "ماشین‌آلات",     "machines"),
+        ("section", "base_data", "base_data", "داده‌های پایه", False, [
+            ("customers",   "مشتریان",         "customers"),
+            ("suppliers",   "تأمین‌کنندگان",   "suppliers"),
+            ("costs",       "انواع هزینه",     "costs"),
+            ("operations",  "عملیات ساخت",     "operations"),
+            ("departments", "دپارتمان‌ها",     "departments"),
+            ("work_centers","مراکز کار",       "work_centers"),
+            ("machines",    "ماشین‌آلات",      "machines"),
         ]),
 
-        ("section", "engineering_group", "🔩", "مهندسی دستگاه", False, [
-            ("📐", "قالب‌های دستگاه",  "device_templates"),
-            ("📦", "کتابخانه اقلام",   "items"),
-            ("📋", "BOM",              "bom"),
-            ("🔀", "مسیر ساخت",       "routing"),
+        ("section", "engineering_group", "engineering", "مهندسی دستگاه", False, [
+            ("device_templates", "قالب‌های دستگاه", "device_templates"),
+            ("items",            "کتابخانه اقلام",  "items"),
+            ("bom",              "BOM",              "bom"),
+            ("routing",          "مسیر ساخت",       "routing"),
         ]),
 
-        ("section", "operations_group", "⚙️", "عملیات", False, [
-            ("📋", "مدیریت پروژه",  "projects"),
-            ("🛒", "تأمین و خرید",  "purchases"),
+        ("section", "operations_group", "operations_group", "عملیات", False, [
+            ("projects",  "مدیریت پروژه",  "projects"),
+            ("purchases", "تأمین و خرید",  "purchases"),
         ]),
 
-        ("section", "reports_group", "📈", "گزارش‌ها", False, [
-            ("📈", "گزارش سود",       "profit"),
-            ("📊", "گزارش پروژه‌ها",  "prj_report"),
+        ("section", "reports_group", "reports", "گزارش‌ها", False, [
+            ("profit",     "گزارش سود",         "profit"),
+            ("prj_report", "گزارش پروژه‌ها",   "prj_report"),
         ]),
 
-        ("section", "system_group", "🔒", "سیستم", True, [
-            ("👥", "کاربران",              "users"),
-            ("🗂️", "داده‌های پایه سیستم", "lookups"),
-            ("⚙️", "تنظیمات",              "settings"),
+        ("section", "system_group", "system", "سیستم", True, [
+            ("users",    "کاربران",                  "users"),
+            ("lookups",  "داده‌های پایه سیستم",     "lookups"),
+            ("settings", "تنظیمات",                 "settings"),
         ]),
     ]
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("sidebar")
-        self.setFixedWidth(Display.sidebar_width())
+        self.setFixedWidth(280)
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
         self._all_items: list[SidebarItem] = []
@@ -183,7 +212,47 @@ class Sidebar(QFrame):
         outer.setSpacing(0)
 
         outer.addWidget(self._build_brand())
+        outer.addWidget(self._build_scroll_menu(), stretch=1)
+        outer.addWidget(self._build_user_card())
+        outer.addWidget(self._build_logout())
+        outer.addWidget(self._build_version())
 
+    def _build_brand(self) -> QFrame:
+        brand = QFrame()
+        brand.setObjectName("sidebarBrand")
+        brand.setFixedHeight(140)
+
+        layout = QVBoxLayout(brand)
+        layout.setContentsMargins(20, 20, 20, 16)
+        layout.setSpacing(6)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        logo_wrap = QHBoxLayout()
+        logo_wrap.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.logo_widget = SidebarLogo(size=52)
+        logo_wrap.addWidget(self.logo_widget)
+        layout.addLayout(logo_wrap)
+
+        title = QLabel(BRAND_NAME)
+        title.setObjectName("sidebarLogoTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        f = QFont()
+        f.setPointSize(18)
+        f.setBold(True)
+        title.setFont(f)
+        layout.addWidget(title)
+
+        sub = QLabel("سامانه مدیریت")
+        sub.setObjectName("sidebarLogoSub")
+        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        f2 = QFont()
+        f2.setPointSize(9)
+        sub.setFont(f2)
+        layout.addWidget(sub)
+
+        return brand
+
+    def _build_scroll_menu(self) -> QScrollArea:
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -193,26 +262,37 @@ class Sidebar(QFrame):
         menu = QWidget()
         menu.setObjectName("sidebarMenu")
         menu_layout = QVBoxLayout(menu)
-        menu_layout.setContentsMargins(8, 8, 8, 8)
+        menu_layout.setContentsMargins(12, 16, 12, 16)
         menu_layout.setSpacing(4)
+
+        section_label = QLabel("منوی اصلی")
+        section_label.setObjectName("sidebarSectionLabel")
+        menu_layout.addWidget(section_label)
+        menu_layout.addSpacing(4)
 
         for entry in self.STRUCTURE:
             if entry[0] == "item":
-                _, icon, label, key, admin_only = entry
-                item = SidebarItem(icon, label, key)
+                _, icon_key, label, key, admin_only = entry
+                item = SidebarItem(icon_key, label, key)
+                item.setMinimumHeight(42)
+                item.setIconSize(self._icon_size(22))
                 item.clicked.connect(
                     lambda checked=False, k=key: self._on_item_clicked(k)
                 )
                 self._all_items.append(item)
                 menu_layout.addWidget(item)
+                menu_layout.addSpacing(6)
 
             elif entry[0] == "section":
-                _, sec_key, icon, title, admin_only, sub_items = entry
-                section = SidebarSection(icon, title, sec_key)
+                _, sec_key, icon_key, title, admin_only, sub_items = entry
+                section = SidebarSection(icon_key, title, sec_key)
+                section.header_btn.setMinimumHeight(42)
                 section.section_clicked.connect(self._on_section_toggle)
 
                 for si_icon, si_label, si_key in sub_items:
                     item = SidebarItem(si_icon, si_label, si_key)
+                    item.setMinimumHeight(36)
+                    item.setIconSize(self._icon_size(18))
                     item.clicked.connect(
                         lambda checked=False, k=si_key: self._on_item_clicked(k)
                     )
@@ -227,47 +307,90 @@ class Sidebar(QFrame):
 
         menu_layout.addStretch()
         scroll.setWidget(menu)
-        outer.addWidget(scroll, stretch=1)
-        outer.addWidget(self._build_logout())
+        return scroll
 
-    def _build_brand(self) -> QFrame:
-        brand = QFrame()
-        brand.setObjectName("sidebarBrand")
-        brand.setFixedHeight(90)
+    def _icon_size(self, size: int):
+        from PySide6.QtCore import QSize
+        return QSize(size, size)
 
-        layout = QVBoxLayout(brand)
-        layout.setContentsMargins(10, 14, 10, 10)
-        layout.setSpacing(0)
+    def _build_user_card(self) -> QFrame:
+        wrap = QFrame()
+        wrap.setObjectName("sidebarUserCardWrap")
+        wrap_layout = QVBoxLayout(wrap)
+        wrap_layout.setContentsMargins(12, 8, 12, 4)
 
-        logo = QLabel(f"🏭  {BRAND_NAME}")
-        logo.setObjectName("sidebarLogo")
-        font = QFont()
-        font.setPointSize(17)
-        font.setBold(True)
-        logo.setFont(font)
-        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(logo)
+        card = QFrame()
+        card.setObjectName("sidebarUserCard")
+        card.setFixedHeight(58)
+
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(10)
+
+        avatar_btn = QPushButton()
+        avatar_btn.setFixedSize(38, 38)
+        avatar_btn.setIcon(IconManager.get("user", color=IconManager.COLOR_PRIMARY))
+        avatar_btn.setIconSize(self._icon_size(30))
+        avatar_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #EEF2FF;
+                border: none;
+                border-radius: 19px;
+            }
+        """)
+        avatar_btn.setEnabled(False)
+        layout.addWidget(avatar_btn)
+
+        info = QVBoxLayout()
+        info.setContentsMargins(0, 0, 0, 0)
+        info.setSpacing(0)
+
+        self.user_name_label = QLabel("—")
+        self.user_name_label.setObjectName("sidebarUserName")
+        info.addWidget(self.user_name_label)
+
+        self.user_role_label = QLabel("—")
+        self.user_role_label.setObjectName("sidebarUserRole")
+        info.addWidget(self.user_role_label)
+
+        layout.addLayout(info)
+        layout.addStretch()
+
+        wrap_layout.addWidget(card)
+        return wrap
+
+    def _build_logout(self) -> QFrame:
+        wrap = QFrame()
+        wrap.setObjectName("sidebarLogoutWrap")
+        layout = QVBoxLayout(wrap)
+        layout.setContentsMargins(12, 6, 12, 8)
+
+        self.logout_btn = QPushButton("   خروج از سیستم")
+        self.logout_btn.setObjectName("sidebarLogout")
+        self.logout_btn.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.logout_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.logout_btn.setIcon(IconManager.get("logout", color=IconManager.COLOR_DANGER))
+        self.logout_btn.setIconSize(self._icon_size(18))
+        self.logout_btn.clicked.connect(self.logout_clicked.emit)
+        layout.addWidget(self.logout_btn)
+
+        return wrap
+
+    def _build_version(self) -> QFrame:
+        wrap = QFrame()
+        layout = QVBoxLayout(wrap)
+        layout.setContentsMargins(0, 0, 0, 10)
 
         ver = QLabel(f"نسخه  {APP_VERSION}")
         ver.setObjectName("sidebarVersion")
         ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(ver)
 
-        return brand
-
-    def _build_logout(self) -> QFrame:
-        wrap = QFrame()
-        wrap.setObjectName("sidebarLogoutWrap")
-        layout = QVBoxLayout(wrap)
-        layout.setContentsMargins(10, 8, 10, 12)
-
-        self.logout_btn = QPushButton("  🚪   خروج از سیستم")
-        self.logout_btn.setObjectName("sidebarLogout")
-        self.logout_btn.setFixedHeight(42)
-        self.logout_btn.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        layout.addWidget(self.logout_btn)
-
         return wrap
+
+    def set_user_info(self, name: str, role: str):
+        self.user_name_label.setText(name)
+        self.user_role_label.setText(role)
 
     def _on_section_toggle(self, section: SidebarSection):
         was_expanded = section.is_expanded()
@@ -294,10 +417,6 @@ class Sidebar(QFrame):
             sec.setVisible(role == UserRole.ADMIN)
 
 
-# ══════════════════════════════════════════════════════════════
-# Top Header
-# ══════════════════════════════════════════════════════════════
-
 class TopHeader(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -313,7 +432,7 @@ class TopHeader(QFrame):
         self.page_title = QLabel("داشبورد")
         self.page_title.setObjectName("headerPageTitle")
         font = QFont()
-        font.setPointSize(14)
+        font.setPointSize(15)
         font.setBold(True)
         self.page_title.setFont(font)
         layout.addWidget(self.page_title)
@@ -331,10 +450,6 @@ class TopHeader(QFrame):
         self.user_label.setText(f"👤  {full_name}   |   {role}")
 
 
-# ══════════════════════════════════════════════════════════════
-# MainWindow اصلی
-# ══════════════════════════════════════════════════════════════
-
 class MainWindow(QMainWindow):
 
     logout_requested = Signal()
@@ -348,18 +463,14 @@ class MainWindow(QMainWindow):
         "departments":      "دپارتمان‌ها",
         "work_centers":     "مراکز کار",
         "machines":         "ماشین‌آلات",
-        # مهندسی دستگاه
         "device_templates": "قالب‌های دستگاه",
         "items":            "کتابخانه اقلام",
         "bom":              "BOM — ساختار قطعات",
         "routing":          "مسیر ساخت",
-        # عملیات
         "projects":         "مدیریت پروژه",
         "purchases":        "تأمین و خرید",
-        # گزارش
         "profit":           "گزارش سود",
         "prj_report":       "گزارش وضعیت پروژه‌ها",
-        # سیستم
         "users":            "مدیریت کاربران",
         "lookups":          "مدیریت داده‌های پایه سیستم",
         "settings":         "تنظیمات",
@@ -406,7 +517,7 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self):
         self.sidebar.page_changed.connect(self._navigate_to)
-        self.sidebar.logout_btn.clicked.connect(self._on_logout)
+        self.sidebar.logout_clicked.connect(self._on_logout)
 
     def _init_session(self):
         user = AccessControl.get_current_user()
@@ -415,6 +526,7 @@ class MainWindow(QMainWindow):
                 user.role.value if hasattr(user.role, "value") else str(user.role)
             )
             self.header.set_user(user.full_name, role_text)
+            self.sidebar.set_user_info(user.full_name, role_text)
             self.sidebar.filter_by_role(user.role)
 
         self._load_pages()
@@ -433,6 +545,7 @@ class MainWindow(QMainWindow):
         from app.ui.machines.machine_list_page import MachineListPage
         from app.ui.device_templates.device_template_list_page import DeviceTemplateListPage
         from app.ui.items.item_list_page import ItemListPage
+        from app.ui.bom.bom_page import BOMPage
 
         self.register_page("dashboard",        DashboardPage())
         self.register_page("users",            UserListPage())
@@ -446,6 +559,7 @@ class MainWindow(QMainWindow):
         self.register_page("machines",         MachineListPage())
         self.register_page("device_templates", DeviceTemplateListPage())
         self.register_page("items",            ItemListPage())
+        self.register_page("bom",              BOMPage())
 
         for key, title in self.PAGE_TITLES.items():
             if key in self._pages:
@@ -491,9 +605,22 @@ class MainWindow(QMainWindow):
         if key not in self._pages:
             logger.warning(f"صفحه '{key}' یافت نشد")
             return
-        self.stack.setCurrentWidget(self._pages[key])
+
+        page = self._pages[key]
+
+        self.stack.setCurrentWidget(page)
         self.sidebar.navigate_to(key)
         self.header.set_page_title(self.PAGE_TITLES.get(key, key))
+
+        if hasattr(page, "refresh") and callable(getattr(page, "refresh")):
+            try:
+                page.refresh()
+            except Exception as e:
+                logger.error(
+                    f"خطا در refresh صفحه '{key}': {e}",
+                    exc_info=True,
+                )
+
         logger.info(f"ناوبری به: {key}")
 
     def _on_logout(self):
@@ -502,6 +629,6 @@ class MainWindow(QMainWindow):
             AuthService().logout()
             logger.info("خروج موفق از سیستم")
         except Exception as e:
-            logger.error(f"خطا در خروج: {e}")
+            logger.error(f"خطا در خروج: {e}", exc_info=True)
         finally:
             self.logout_requested.emit()

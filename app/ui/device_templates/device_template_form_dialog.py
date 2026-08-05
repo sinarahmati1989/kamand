@@ -1,5 +1,5 @@
 """
-دیالوگ افزودن/ویرایش قالب دستگاه
+دیالوگ افزودن/ویرایش تعریف دستگاه
 """
 import logging
 
@@ -19,14 +19,22 @@ from app.database.session import get_session
 from app.enums.engineering_enums import DeviceTemplateStatus
 from app.enums.lookup_categories import LookupCategory
 from app.ui.widgets.lookup_combo_with_add import LookupComboBoxWithAdd
-from app.ui.widgets.lookup_combo import LookupComboBox
 from app.ui.widgets.toast import Toast
 
 logger = logging.getLogger(__name__)
 
 
+# واحدهای زمان و ضرایب تبدیل به دقیقه
+TIME_UNITS = [
+    ("minute", "دقیقه", 1),
+    ("hour",   "ساعت",  60),
+    ("day",    "روز",   60 * 8),      # روز کاری = 8 ساعت
+    ("week",   "هفته",  60 * 8 * 5),  # هفته کاری = 5 روز
+]
+
+
 class DeviceTemplateFormDialog(QDialog):
-    """فرم افزودن/ویرایش قالب دستگاه"""
+    """فرم افزودن/ویرایش تعریف دستگاه"""
 
     def __init__(self, template_id: int | None = None, parent=None):
         super().__init__(parent)
@@ -35,10 +43,10 @@ class DeviceTemplateFormDialog(QDialog):
 
         self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.setWindowTitle(
-            "ویرایش قالب دستگاه" if self.is_edit else "قالب دستگاه جدید"
+            "ویرایش تعریف دستگاه" if self.is_edit else "تعریف دستگاه جدید"
         )
-        self.setMinimumSize(640, 620)
-        self.resize(680, 660)
+        self.setMinimumSize(640, 580)
+        self.resize(680, 620)
 
         self._setup_ui()
 
@@ -52,59 +60,58 @@ class DeviceTemplateFormDialog(QDialog):
 
         # عنوان
         title_text = (
-            "ویرایش قالب دستگاه" if self.is_edit else "قالب دستگاه جدید"
+            "ویرایش تعریف دستگاه" if self.is_edit else "تعریف دستگاه جدید"
         )
         title = QLabel(title_text)
         title.setObjectName("pageTitle")
         layout.addWidget(title)
 
-        # کد — هم در افزودن هم ویرایش
+        # ردیف کد
         code_row = QHBoxLayout()
-        code_lbl = QLabel("کد قالب:")
+        code_lbl = QLabel("کد دستگاه:")
         code_lbl.setObjectName("fieldLabel")
         self.code_input = QLineEdit()
         self.code_input.setPlaceholderText(
-            "خودکار: DVT-0001 (یا خودتان وارد کنید)"
+            "خودکار: DVT-0001  (یا خودتان وارد کنید)"
         )
         self.code_input.setMinimumHeight(36)
-        self.code_input.setMaximumWidth(280)
+        self.code_input.setMaximumWidth(260)
         if self.is_edit:
             self.code_input.setReadOnly(True)
             self.code_input.setStyleSheet(
                 "color: #6366F1; font-weight: bold; font-size: 14px;"
                 "padding: 6px 12px; background: rgba(255,255,255,0.85);"
-                "border: 1.5px solid rgba(99,102,241,0.25);"
-                "border-radius: 8px;"
+                "border: 1.5px solid rgba(99,102,241,0.25); border-radius: 8px;"
             )
         code_row.addWidget(code_lbl)
         code_row.addWidget(self.code_input)
         code_row.addStretch()
         layout.addLayout(code_row)
 
-        # اسکرول
+        # محتوا داخل scroll
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(16)
 
-        # ── گروه اطلاعات پایه ──
+        # ── گروه اطلاعات پایه ─────────────────────────────────────
         basic = QGroupBox("اطلاعات پایه")
         basic.setObjectName("formGroup")
         bv = QVBoxLayout(basic)
         bv.setContentsMargins(14, 20, 14, 14)
         bv.setSpacing(12)
 
-        # نام
+        # نام دستگاه
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText(
-            "مثال: هیدرولیک اکچویتور ۵۰ تن، پمپ فشار بالا"
+            "مثال: پمپ هیدرولیک 160 تن — سری آلفا"
         )
         self.name_input.setMinimumHeight(36)
         bv.addWidget(
-            self._make_field("نام دستگاه", self.name_input, required=True)
+            self._field("نام دستگاه", self.name_input, required=True)
         )
 
-        # ردیف نوع + Revision
+        # نوع دستگاه + Revision
         row1 = QHBoxLayout()
         row1.setSpacing(12)
 
@@ -113,98 +120,91 @@ class DeviceTemplateFormDialog(QDialog):
             allow_empty=True,
         )
         self.type_combo.setMinimumHeight(36)
-        row1.addWidget(
-            self._make_field("نوع دستگاه", self.type_combo), 2
-        )
+        row1.addWidget(self._field("نوع دستگاه", self.type_combo), 2)
 
         self.revision_spin = QSpinBox()
         self.revision_spin.setRange(1, 99)
         self.revision_spin.setValue(1)
         self.revision_spin.setMinimumHeight(36)
         self.revision_spin.setPrefix("Rev. ")
-        row1.addWidget(
-            self._make_field("Revision", self.revision_spin), 1
-        )
+        self.revision_spin.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        row1.addWidget(self._field("Revision", self.revision_spin), 1)
+
         bv.addLayout(row1)
 
-        # ردیف واحد + وضعیت
-        row2 = QHBoxLayout()
-        row2.setSpacing(12)
-
-        self.uom_combo = LookupComboBox(
-            LookupCategory.UOM.value,
-            allow_empty=True,
-        )
-        self.uom_combo.setMinimumHeight(36)
-        row2.addWidget(
-            self._make_field("واحد اصلی", self.uom_combo), 1
-        )
-
-        self.status_combo = QComboBox()
-        self.status_combo.setMinimumHeight(36)
-        for st in DeviceTemplateStatus:
-            self.status_combo.addItem(st.label, st.value)
-        if not self.is_edit:
-            self.status_combo.setEnabled(False)
-            self.status_combo.setToolTip(
-                "وضعیت رکورد جدید پیش‌فرض «پیش‌نویس» است."
-            )
-        row2.addWidget(
-            self._make_field("وضعیت", self.status_combo), 1
-        )
-        bv.addLayout(row2)
+        # وضعیت — فقط در ویرایش
+        if self.is_edit:
+            self.status_combo = QComboBox()
+            self.status_combo.setMinimumHeight(36)
+            for st in DeviceTemplateStatus:
+                self.status_combo.addItem(st.label, st.value)
+            bv.addWidget(self._field("وضعیت", self.status_combo))
+        else:
+            self.status_combo = None
 
         content_layout.addWidget(basic)
 
-        # ── گروه مشخصات فنی ──
+        # ── گروه مشخصات فنی ───────────────────────────────────────
         tech = QGroupBox("مشخصات فنی")
         tech.setObjectName("formGroup")
         tv = QVBoxLayout(tech)
         tv.setContentsMargins(14, 20, 14, 14)
         tv.setSpacing(12)
 
-        row3 = QHBoxLayout()
-        row3.setSpacing(12)
+        row2 = QHBoxLayout()
+        row2.setSpacing(12)
 
+        # ── وزن ────────────────────────────────────────
         self.weight_spin = QDoubleSpinBox()
         self.weight_spin.setRange(0, 99999)
-        self.weight_spin.setDecimals(3)
+        self.weight_spin.setDecimals(2)
         self.weight_spin.setSpecialValueText("—")
-        self.weight_spin.setSuffix(" kg")
+        self.weight_spin.setSuffix("  kg")
         self.weight_spin.setMinimumHeight(36)
-        row3.addWidget(
-            self._make_field("وزن تقریبی", self.weight_spin), 1
+        self.weight_spin.setSingleStep(0.5)
+        self.weight_spin.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        row2.addWidget(self._field("وزن تقریبی", self.weight_spin), 1)
+
+        # ── زمان ساخت (با واحد) ───────────────────────
+        time_widget = self._build_time_field()
+        row2.addWidget(
+            self._field("زمان ساخت استاندارد", time_widget), 1
         )
 
-        self.cycle_time_spin = QSpinBox()
-        self.cycle_time_spin.setRange(0, 99999)
-        self.cycle_time_spin.setSpecialValueText("—")
-        self.cycle_time_spin.setSuffix(" دقیقه")
-        self.cycle_time_spin.setMinimumHeight(36)
-        row3.addWidget(
-            self._make_field("زمان ساخت استاندارد", self.cycle_time_spin), 1
-        )
-        tv.addLayout(row3)
-
+        tv.addLayout(row2)
         content_layout.addWidget(tech)
 
-        # ── توضیحات ──
+        # ── توضیحات ───────────────────────────────────────────────
         self.description_input = QTextEdit()
-        self.description_input.setPlaceholderText("توضیحات کلی دستگاه...")
-        self.description_input.setMinimumHeight(80)
-        self.description_input.setMaximumHeight(110)
+        self.description_input.setPlaceholderText(
+            "توضیحات کلی دستگاه، کاربرد، ویژگی‌های اصلی..."
+        )
+        self.description_input.setMinimumHeight(75)
+        self.description_input.setMaximumHeight(95)
+        self.description_input.setStyleSheet("""
+            QTextEdit {
+                font-family: "Vazirmatn", "Segoe UI", "B Nazanin";
+                font-size: 13px;
+            }
+        """)
         content_layout.addWidget(
-            self._make_field("توضیحات", self.description_input)
+            self._field("توضیحات", self.description_input)
         )
 
         self.tech_notes_input = QTextEdit()
         self.tech_notes_input.setPlaceholderText(
-            "نکات مهندسی، استانداردها، محدودیت‌ها..."
+            "نکات مهندسی، استانداردها، محدودیت‌های طراحی..."
         )
-        self.tech_notes_input.setMinimumHeight(80)
-        self.tech_notes_input.setMaximumHeight(110)
+        self.tech_notes_input.setMinimumHeight(75)
+        self.tech_notes_input.setMaximumHeight(95)
+        self.tech_notes_input.setStyleSheet("""
+            QTextEdit {
+                font-family: "Vazirmatn", "Segoe UI", "B Nazanin";
+                font-size: 13px;
+            }
+        """)
         content_layout.addWidget(
-            self._make_field("نکات مهندسی", self.tech_notes_input)
+            self._field("نکات مهندسی", self.tech_notes_input)
         )
 
         content_layout.addStretch(1)
@@ -223,7 +223,7 @@ class DeviceTemplateFormDialog(QDialog):
         btn_row.setSpacing(10)
 
         save_btn = QPushButton("ذخیره")
-        save_btn.setObjectName("neonButton")
+        save_btn.setObjectName("primaryButton")
         save_btn.setFixedSize(130, 42)
         save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self._on_save)
@@ -239,13 +239,45 @@ class DeviceTemplateFormDialog(QDialog):
         btn_row.addWidget(save_btn)
         layout.addLayout(btn_row)
 
-    def _make_field(
+    def _build_time_field(self) -> QWidget:
+        """
+        ساخت فیلد ترکیبی زمان ساخت:
+        [عدد] [واحد: دقیقه/ساعت/روز/هفته]
+        """
+        wrapper = QWidget()
+        h = QHBoxLayout(wrapper)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+
+        self.time_value_spin = QDoubleSpinBox()
+        self.time_value_spin.setRange(0, 99999)
+        self.time_value_spin.setDecimals(2)
+        self.time_value_spin.setSpecialValueText("—")
+        self.time_value_spin.setMinimumHeight(36)
+        self.time_value_spin.setSingleStep(0.5)
+        self.time_value_spin.setLayoutDirection(
+            Qt.LayoutDirection.LeftToRight
+        )
+
+        self.time_unit_combo = QComboBox()
+        self.time_unit_combo.setMinimumHeight(36)
+        self.time_unit_combo.setFixedWidth(90)
+        for code, label, _ in TIME_UNITS:
+            self.time_unit_combo.addItem(label, code)
+        # پیش‌فرض: ساعت (خیلی معمول‌تره)
+        self.time_unit_combo.setCurrentIndex(1)
+
+        h.addWidget(self.time_value_spin, 2)
+        h.addWidget(self.time_unit_combo, 1)
+        return wrapper
+
+    def _field(
         self, label_text: str, widget: QWidget, required: bool = False
     ) -> QWidget:
         wrapper = QWidget()
         v = QVBoxLayout(wrapper)
         v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(6)
+        v.setSpacing(5)
         lbl = QLabel(f"{label_text} *" if required else label_text)
         lbl.setObjectName("fieldLabel")
         lbl.setAlignment(
@@ -255,13 +287,39 @@ class DeviceTemplateFormDialog(QDialog):
         v.addWidget(widget)
         return wrapper
 
+    # ── تبدیل واحد زمان ────────────────────────────────────────────
+
+    def _get_time_multiplier(self, unit_code: str) -> int:
+        """گرفتن ضریب تبدیل واحد زمان به دقیقه"""
+        for code, _, mult in TIME_UNITS:
+            if code == unit_code:
+                return mult
+        return 1
+
+    def _minutes_to_best_unit(self, minutes: int) -> tuple[float, str]:
+        """
+        تبدیل دقیقه به بهترین واحد نمایش:
+        - < 60 دقیقه → دقیقه
+        - < 8 ساعت → ساعت
+        - < 5 روز → روز
+        - بقیه → هفته
+        """
+        if minutes < 60:
+            return (minutes, "minute")
+        elif minutes < 60 * 8:
+            return (round(minutes / 60, 2), "hour")
+        elif minutes < 60 * 8 * 5:
+            return (round(minutes / (60 * 8), 2), "day")
+        else:
+            return (round(minutes / (60 * 8 * 5), 2), "week")
+
     def _load_data(self):
         try:
             with get_session() as session:
                 svc = DeviceTemplateService(session)
                 t = svc.get_by_id(self.template_id)
                 if not t:
-                    raise ValueError("قالب یافت نشد")
+                    raise ValueError("تعریف دستگاه یافت نشد")
 
                 self.code_input.setText(t.code)
                 self.name_input.setText(t.name or "")
@@ -271,18 +329,23 @@ class DeviceTemplateFormDialog(QDialog):
 
                 self.revision_spin.setValue(t.revision_no or 1)
 
-                if t.default_uom:
-                    self.uom_combo.set_current_code(t.default_uom)
-
-                idx = self.status_combo.findData(t.status)
-                if idx >= 0:
-                    self.status_combo.setCurrentIndex(idx)
+                if self.status_combo:
+                    idx = self.status_combo.findData(t.status)
+                    if idx >= 0:
+                        self.status_combo.setCurrentIndex(idx)
 
                 if t.estimated_weight:
                     self.weight_spin.setValue(float(t.estimated_weight))
 
+                # زمان ساخت: تبدیل از دقیقه به بهترین واحد
                 if t.estimated_cycle_time:
-                    self.cycle_time_spin.setValue(t.estimated_cycle_time)
+                    value, unit = self._minutes_to_best_unit(
+                        t.estimated_cycle_time
+                    )
+                    self.time_value_spin.setValue(value)
+                    idx = self.time_unit_combo.findData(unit)
+                    if idx >= 0:
+                        self.time_unit_combo.setCurrentIndex(idx)
 
                 if t.description:
                     self.description_input.setPlainText(t.description)
@@ -291,61 +354,24 @@ class DeviceTemplateFormDialog(QDialog):
                     self.tech_notes_input.setPlainText(t.technical_notes)
 
         except Exception as e:
-            logger.error(f"خطا در بارگذاری قالب: {e}", exc_info=True)
+            logger.error(f"خطا در بارگذاری: {e}", exc_info=True)
             Toast.error(self, f"خطا: {e}")
 
-    def _collect_data(self) -> dict:
+    def _collect(self) -> dict:
         weight_val = self.weight_spin.value()
-        cycle_val = self.cycle_time_spin.value()
+
+        # تبدیل زمان به دقیقه
+        time_val = self.time_value_spin.value()
+        time_unit = self.time_unit_combo.currentData()
+        cycle_minutes = None
+        if time_val > 0:
+            multiplier = self._get_time_multiplier(time_unit)
+            cycle_minutes = int(round(time_val * multiplier))
 
         return {
-            "code": self.code_input.text().strip() or None,
-            "name": self.name_input.text().strip(),
-            "template_type": self.type_combo.get_current_code() or None,
-            "revision_no": self.revision_spin.value(),
-            "default_uom": self.uom_combo.get_current_code() or None,
-            "estimated_weight": weight_val if weight_val > 0 else None,
-            "estimated_cycle_time": cycle_val if cycle_val > 0 else None,
-            "description": (
-                self.description_input.toPlainText().strip() or None
-            ),
-            "technical_notes": (
-                self.tech_notes_input.toPlainText().strip() or None
-            ),
-        }
-
-    def _validate(self, data: dict) -> str | None:
-        if not data.get("name"):
-            return "نام دستگاه الزامی است"
-        if len(data["name"]) < 2:
-            return "نام دستگاه باید حداقل ۲ کاراکتر باشد"
-        return None
-
-    def _on_save(self):
-        try:
-            data = self._collect_data()
-            error = self._validate(data)
-            if error:
-                Toast.warning(self, error)
-                return
-
-            with get_session() as session:
-                svc = DeviceTemplateService(session)
-                if self.is_edit:
-                    data["status"] = self.status_combo.currentData()
-                    # کد در ویرایش تغییر نمی‌کنه
-                    data.pop("code", None)
-                    svc.update(
-                        self.template_id,
-                        DeviceTemplateUpdate(**data),
-                    )
-                else:
-                    svc.create(DeviceTemplateCreate(**data))
-
-            self.accept()
-
-        except ValueError as e:
-            Toast.warning(self, str(e))
-        except Exception as e:
-            logger.error(f"خطا در ذخیره: {e}", exc_info=True)
-            Toast.error(self, f"خطا: {e}")
+            "code":                 self.code_input.text().strip() or None,
+            "name":                 self.name_input.text().strip(),
+            "template_type":        self.type_combo.get_current_code() or None,
+            "revision_no":          self.revision_spin.value(),
+            "estimated_weight":     weight_val if weight_val > 0 else None,
+            "estimated_cycle_time": 

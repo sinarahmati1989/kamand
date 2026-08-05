@@ -1,28 +1,315 @@
-/* ═══════════════════════════════════════
-   BUTTONS — Aurora
-   ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   BUTTONS — Aurora Glass Light (Professional)
+   استایل حرفه‌ای برای همه دکمه‌های پروژه
+   ═══════════════════════════════════════════════ */
+
+
+/* ─────────────────────────────────────────────
+   دکمه عمومی (پیش‌فرض)
+   استایل ملایم برای QPushButton بدون objectName
+   ───────────────────────────────────────────── */
 
 QPushButton {
-    background-color: rgba(99, 102, 241, 0.1);
-    color: #6366F1;
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background-color: rgba(99, 102, 241, 0.08);
+    color: #4F46E5;
+    border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: 10px;
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
+    min-height: 24px;
 }
 
 QPushButton:hover {
-    background-color: rgba(99, 102, 241, 0.2);
+    background-color: rgba(99, 102, 241, 0.18);
     border-color: #6366F1;
+    color: #4F46E5;
 }
 
 QPushButton:pressed {
-    background-color: rgba(99, 102, 241, 0.3);
+    background-color: rgba(99, 102, 241, 0.28);
 }
 
 QPushButton:disabled {
     background-color: #F1F5F9;
     color: #94A3B8;
     border-color: #E2E8F0;
+}
+
+
+/* ═══════════════════════════════════════════════
+   PRIMARY BUTTON — دکمه اصلی (ذخیره، تأیید)
+   بنفش Solid پررنگ — سایز عادی فرم‌ها
+   ═══════════════════════════════════════════════ */
+
+QPushButton#primaryButton,
+QPushButton#neonButton,
+QPushButton#saveButton {
+    background-color: #6366F1;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 24px;
+}
+
+QPushButton#primaryButton:hover,
+QPushButton#neonButton:hover,
+QPushButton#saveButton:hover {
+    background-color: #4F46E5;
+}
+
+QPushButton#primaryButton:pressed,
+QPushButton#neonButton:pressed,
+QPushButton#saveButton:pressed {
+    background-color: #4338CA;
+}
+
+QPushButton#primaryButton:disabled,
+QPushButton#neonButton:disabled,
+QPushButton#saveButton:disabled {
+    background-color: #A5B4FC;
+    color: #E0E7FF;
+}
+
+
+/* ═══════════════════════════════════════════════
+   PRIMARY BUTTON XL — دکمه بزرگ (ورود، CTA)
+   استفاده در فرم Login و صفحات مهم
+   ⚠️ objectName با P بزرگ (case-sensitive)
+   ═══════════════════════════════════════════════ */
+
+QPushButton#PrimaryButton {
+    background-color: #6366F1;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 14px;
+    padding: 0px 22px;
+    font-size: 16px;
+    font-weight: 700;
+    min-height: 54px;
+    max-height: 54px;
+    letter-spacing: 0.3px;
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: #4F46E5;
+}
+
+QPushButton#PrimaryButton:pressed {
+    background-color: #4338CA;
+}
+
+QPushButton#PrimaryButton:disabled {
+    background-color: #A5B4FC;
+    color: #E0E7FF;
+}
+
+
+/* ═══════════════════════════════════════════════
+   NEON BUTTON XL — دکمه بزرگ قدیمی (اگه جایی استفاده شد)
+   ⚠️ objectName با N بزرگ
+   ═══════════════════════════════════════════════ */
+
+QPushButton#NeonButton {
+    background: qlineargradient(
+        x1:0, y1:0, x2:1, y2:0,
+        stop:0 #6366F1, stop:1 #8B5CF6
+    );
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    padding: 0px 22px;
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 48px;
+}
+
+QPushButton#NeonButton:hover {
+    background: qlineargradient(
+        x1:0, y1:0, x2:1, y2:0,
+        stop:0 #4F46E5, stop:1 #7C3AED
+    );
+}
+
+
+/* ═══════════════════════════════════════════════
+   SECONDARY BUTTON — دکمه فرعی (انصراف، بستن)
+   سفید با Border
+   ═══════════════════════════════════════════════ */
+
+QPushButton#secondaryButton,
+QPushButton#cancelButton {
+    background-color: #FFFFFF;
+    color: #475569;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 24px;
+}
+
+QPushButton#secondaryButton:hover,
+QPushButton#cancelButton:hover {
+    background-color: #F8FAFC;
+    border-color: #6366F1;
+    color: #4F46E5;
+}
+
+QPushButton#secondaryButton:pressed,
+QPushButton#cancelButton:pressed {
+    background-color: #F1F5F9;
+    border-color: #4F46E5;
+}
+
+
+/* ═══════════════════════════════════════════════
+   DANGER BUTTON — دکمه حذف/خطر
+   قرمز Solid
+   ═══════════════════════════════════════════════ */
+
+QPushButton#dangerButton,
+QPushButton#deleteButton {
+    background-color: #EF4444;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 24px;
+}
+
+QPushButton#dangerButton:hover,
+QPushButton#deleteButton:hover {
+    background-color: #DC2626;
+}
+
+QPushButton#dangerButton:pressed,
+QPushButton#deleteButton:pressed {
+    background-color: #B91C1C;
+}
+
+
+/* ═══════════════════════════════════════════════
+   WARNING BUTTON — دکمه هشدار (تغییر وضعیت)
+   نارنجی Solid
+   ═══════════════════════════════════════════════ */
+
+QPushButton#warningButton {
+    background-color: #F59E0B;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 24px;
+}
+
+QPushButton#warningButton:hover {
+    background-color: #D97706;
+}
+
+QPushButton#warningButton:pressed {
+    background-color: #B45309;
+}
+
+
+/* ═══════════════════════════════════════════════
+   SUCCESS BUTTON — دکمه موفقیت
+   سبز Solid
+   ═══════════════════════════════════════════════ */
+
+QPushButton#successButton {
+    background-color: #10B981;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 24px;
+}
+
+QPushButton#successButton:hover {
+    background-color: #059669;
+}
+
+QPushButton#successButton:pressed {
+    background-color: #047857;
+}
+
+
+/* ═══════════════════════════════════════════════
+   ICON BUTTON — دکمه‌های آیکونی کوچیک
+   ═══════════════════════════════════════════════ */
+
+QPushButton#iconButton {
+    background-color: rgba(255, 255, 255, 0.85);
+    color: #6366F1;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 36px;
+    min-height: 36px;
+}
+
+QPushButton#iconButton:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+    border-color: #6366F1;
+}
+
+QPushButton#iconButton:pressed {
+    background-color: rgba(99, 102, 241, 0.2);
+}
+
+
+/* ═══════════════════════════════════════════════
+   LINK BUTTON — دکمه‌های شبیه لینک (بدون پس‌زمینه)
+   ═══════════════════════════════════════════════ */
+
+QPushButton#linkButton {
+    background-color: transparent;
+    color: #6366F1;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+QPushButton#linkButton:hover {
+    color: #4F46E5;
+    background-color: rgba(99, 102, 241, 0.08);
+}
+
+
+/* ═══════════════════════════════════════════════
+   FLAT BUTTON — دکمه بدون Border و پس‌زمینه
+   ═══════════════════════════════════════════════ */
+
+QPushButton#flatButton {
+    background-color: transparent;
+    color: #6366F1;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    min-height: 24px;
+}
+
+QPushButton#flatButton:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+QPushButton#flatButton:pressed {
+    background-color: rgba(99, 102, 241, 0.2);
 }

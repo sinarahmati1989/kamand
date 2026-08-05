@@ -21,13 +21,15 @@ def load_qss_file(filename: str) -> str:
 def load_all_qss() -> str:
     """بارگذاری همه فایل‌های QSS"""
     qss_files = [
+        "fonts.qss",
         "base.qss",
         "buttons.qss",
         "inputs.qss",
         "dialogs.qss",
         "scrollbar.qss",
-	"main.qss",
-	"master_data.qss",
+        "main.qss",
+        "master_data.qss",
+        "sidebar.qss",
     ]
     combined = ""
     for filename in qss_files:
