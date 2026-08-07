@@ -1,5 +1,5 @@
 """
-صفحه لیست قالب‌های دستگاه
+صفحه لیست تعریف‌های دستگاه
 """
 import logging
 
@@ -32,7 +32,7 @@ COLUMNS = [
 ]
 
 ENGINEERING_STEPS = [
-    ("device_templates", "قالب دستگاه"),
+    ("device_templates", "تعریف دستگاه"),
     ("items",            "اقلام"),
     ("bom",              "BOM"),
     ("routing",          "مسیر ساخت"),
@@ -40,7 +40,7 @@ ENGINEERING_STEPS = [
 
 
 class DeviceTemplateListPage(QWidget):
-    """صفحه مدیریت قالب‌های دستگاه"""
+    """صفحه مدیریت تعریف‌های دستگاه"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -66,7 +66,7 @@ class DeviceTemplateListPage(QWidget):
     def _build_header(self) -> QHBoxLayout:
         row = QHBoxLayout()
 
-        title = QLabel("قالب‌های دستگاه")
+        title = QLabel("تعریف‌های دستگاه")
         title.setObjectName("pageTitle")
 
         self._type_filter = LookupComboBox(
@@ -92,7 +92,7 @@ class DeviceTemplateListPage(QWidget):
         self._search.setFixedWidth(240)
         self._search.textChanged.connect(self._on_search)
 
-        add_btn = QPushButton("+ قالب جدید")
+        add_btn = QPushButton("+ دستگاه جدید")
         add_btn.setObjectName("neonButton")
         add_btn.setFixedHeight(38)
         add_btn.setMinimumWidth(140)
@@ -189,10 +189,10 @@ class DeviceTemplateListPage(QWidget):
                 })
 
             self._table.load_data(rows)
-            logger.info(f"قالب‌های دستگاه بارگذاری شد. تعداد: {len(rows)}")
+            logger.info(f"تعریف‌های دستگاه بارگذاری شد. تعداد: {len(rows)}")
 
         except Exception as e:
-            logger.error(f"خطا در بارگذاری قالب‌ها: {e}", exc_info=True)
+            logger.error(f"خطا در بارگذاری تعریف‌ها: {e}", exc_info=True)
             Toast.error(self, f"خطا: {e}")
 
     def _on_search(self, _):
@@ -210,7 +210,7 @@ class DeviceTemplateListPage(QWidget):
         dlg = DeviceTemplateFormDialog(parent=self)
         if dlg.exec():
             self.refresh()
-            Toast.success(self, "قالب دستگاه با موفقیت ثبت شد")
+            Toast.success(self, "تعریف دستگاه با موفقیت ثبت شد")
 
     def _on_edit(self, template_id: int):
         from app.ui.device_templates.device_template_form_dialog import (
@@ -219,26 +219,26 @@ class DeviceTemplateListPage(QWidget):
         dlg = DeviceTemplateFormDialog(template_id=template_id, parent=self)
         if dlg.exec():
             self.refresh()
-            Toast.success(self, "قالب دستگاه ویرایش شد")
+            Toast.success(self, "تعریف دستگاه ویرایش شد")
 
     def _on_edit_selected(self):
         oid = self._table.get_selected_id()
         if oid is None:
-            Toast.warning(self, "یک قالب را انتخاب کنید")
+            Toast.warning(self, "یک تعریف را انتخاب کنید")
             return
         self._on_edit(oid)
 
     def _on_toggle_status(self):
         oid = self._table.get_selected_id()
         if oid is None:
-            Toast.warning(self, "یک قالب را انتخاب کنید")
+            Toast.warning(self, "یک تعریف را انتخاب کنید")
             return
         try:
             with get_session() as session:
                 svc = DeviceTemplateService(session)
                 item = svc.get_by_id(oid)
             if not item:
-                Toast.error(self, "قالب یافت نشد")
+                Toast.error(self, "تعریف یافت نشد")
                 return
 
             # چرخش: draft → approved → obsolete → draft
@@ -267,13 +267,13 @@ class DeviceTemplateListPage(QWidget):
                 svc = DeviceTemplateService(session)
                 item = svc.get_by_id(template_id)
             if not item:
-                Toast.error(self, "قالب یافت نشد")
+                Toast.error(self, "تعریف یافت نشد")
                 return
 
             dlg = ConfirmDialog(
                 parent=self,
                 title="تأیید حذف",
-                message=f"قالب «{item.name}» حذف شود؟",
+                message=f"تعریف «{item.name}» حذف شود؟",
                 confirm_text="بله، حذف کن",
                 cancel_text="انصراف",
                 dangerous=True,
@@ -285,7 +285,7 @@ class DeviceTemplateListPage(QWidget):
                 svc = DeviceTemplateService(session)
                 svc.delete(template_id)
 
-            Toast.success(self, "قالب حذف شد")
+            Toast.success(self, "تعریف حذف شد")
             self.refresh()
 
         except ValueError as e:
@@ -297,6 +297,6 @@ class DeviceTemplateListPage(QWidget):
     def _on_delete_selected(self):
         oid = self._table.get_selected_id()
         if oid is None:
-            Toast.warning(self, "یک قالب را انتخاب کنید")
+            Toast.warning(self, "یک تعریف را انتخاب کنید")
             return
         self._on_delete(oid)

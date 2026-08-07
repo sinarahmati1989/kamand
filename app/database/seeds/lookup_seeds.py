@@ -33,9 +33,12 @@ LOOKUP_SEEDS = {
     ],
 
     "currency": [
-        {"code": "irr", "label": "ریال", "sort": 10, "en": "IRR"},
-        {"code": "usd", "label": "دلار", "sort": 20, "en": "USD"},
-        {"code": "eur", "label": "یورو", "sort": 30, "en": "EUR"},
+        {"code": "irr",    "label": "ریال",           "sort": 10, "en": "IRR"},
+        {"code": "irr_k",  "label": "هزار ریال",     "sort": 20, "en": "IRR_K"},
+        {"code": "irr_m",  "label": "میلیون ریال",   "sort": 30, "en": "IRR_M"},
+        {"code": "irr_b",  "label": "میلیارد ریال",  "sort": 40, "en": "IRR_B"},
+        {"code": "usd",    "label": "دلار",           "sort": 50, "en": "USD"},
+        {"code": "eur",    "label": "یورو",           "sort": 60, "en": "EUR"},
     ],
 
     "cost_category": [
@@ -70,9 +73,10 @@ LOOKUP_SEEDS = {
         {"code": "manual",         "label": "دستی",           "sort": 60},
     ],
 
-    "customer_type": [
-        {"code": "real",  "label": "حقیقی",  "sort": 10},
-        {"code": "legal", "label": "حقوقی",  "sort": 20},
+    "customer_tier": [
+        {"code": "a", "label": "A - VIP (مشتری کلیدی)",     "sort": 10},
+        {"code": "b", "label": "B - عادی (منظم)",           "sort": 20},
+        {"code": "c", "label": "C - موردی (کم‌ترافیک)",     "sort": 30},
     ],
 
     "operation_type": [
@@ -105,6 +109,11 @@ LOOKUP_SEEDS = {
         {"code": "second", "label": "ثانیه", "sort": 10},
         {"code": "minute", "label": "دقیقه", "sort": 20},
         {"code": "hour",   "label": "ساعت",  "sort": 30},
+    ],
+        "weight_unit": [
+        {"code": "gr",  "label": "گرم",      "sort": 10, "en": "g"},
+        {"code": "kg",  "label": "کیلوگرم",  "sort": 20, "en": "kg"},
+        {"code": "ton", "label": "تن",       "sort": 30, "en": "ton"},
     ],
 
     "department_type": [

@@ -46,7 +46,7 @@ class DeviceTemplateService:
     def update(self, template_id: int, data: DeviceTemplateUpdate) -> DeviceTemplate:
         template = self.repo.get_by_id(template_id)
         if not template:
-            raise ValueError("قالب دستگاه یافت نشد")
+            raise ValueError("تعریف دستگاه یافت نشد")
 
         update_data = data.model_dump(exclude_none=True)
         for field, value in update_data.items():
@@ -57,7 +57,7 @@ class DeviceTemplateService:
     def delete(self, template_id: int) -> None:
         template = self.repo.get_by_id(template_id)
         if not template:
-            raise ValueError("قالب دستگاه یافت نشد")
+            raise ValueError("تعریف دستگاه یافت نشد")
         self.repo.delete(template)
 
     def get_by_id(self, template_id: int) -> Optional[DeviceTemplate]:
@@ -74,7 +74,7 @@ class DeviceTemplateService:
     def change_status(self, template_id: int, new_status: str) -> DeviceTemplate:
         template = self.repo.get_by_id(template_id)
         if not template:
-            raise ValueError("قالب دستگاه یافت نشد")
+            raise ValueError("تعریف دستگاه یافت نشد")
         template.status = new_status
         return self.repo.update(template)
 

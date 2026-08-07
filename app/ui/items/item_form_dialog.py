@@ -1,17 +1,15 @@
 """
-دیالوگ افزودن/ویرایش قلم
-فیلدهای دستی → LookupComboBoxWithAdd
-کد editable
-هزینه استاندارد + ارز
+Kamand - Item Form Dialog
+افزودن/ویرایش قلم
+با WeightWidget و MoneyWidget
 """
 import logging
-from decimal import Decimal
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QComboBox, QTextEdit,
     QPushButton, QWidget, QGroupBox,
-    QScrollArea, QFrame, QDoubleSpinBox,
+    QScrollArea, QFrame,
 )
 from PySide6.QtCore import Qt
 
@@ -22,6 +20,8 @@ from app.enums.engineering_enums import ItemStatus
 from app.enums.lookup_categories import LookupCategory
 from app.ui.widgets.lookup_combo_with_add import LookupComboBoxWithAdd
 from app.ui.widgets.lookup_combo import LookupComboBox
+from app.ui.widgets.weight_widget import WeightWidget
+from app.ui.widgets.money_widget import MoneyWidget
 from app.ui.widgets.toast import Toast
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class ItemFormDialog(QDialog):
         title.setObjectName("pageTitle")
         layout.addWidget(title)
 
-        # کد — هم در افزودن هم ویرایش
+        # کد
         code_row = QHBoxLayout()
         code_lbl = QLabel("کد قلم:")
         code_lbl.setObjectName("fieldLabel")
@@ -87,7 +87,7 @@ class ItemFormDialog(QDialog):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(16)
 
-        # ── گروه اطلاعات پایه ──
+        # اطلاعات پایه
         basic = QGroupBox("اطلاعات پایه")
         basic.setObjectName("formGroup")
         bv = QVBoxLayout(basic)
@@ -97,7 +97,7 @@ class ItemFormDialog(QDialog):
         # نام
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText(
-            "مثال: پیچ M12×50، بلبرینگ 6205، ورق فولادی ۳mm"
+            "مثال: پیچ M12×50، بلبرینگ 6205، ورق فولادی 3mm"
         )
         self.name_input.setMinimumHeight(36)
         bv.addWidget(
@@ -123,30 +123,34 @@ class ItemFormDialog(QDialog):
         row1.addWidget(self._make_field("واحد", self.uom_combo), 1)
         bv.addLayout(row1)
 
-        # وضعیت
+        # وضعیت — فقط در ویرایش
         self.status_combo = QComboBox()
         self.status_combo.setMinimumHeight(36)
         for st in ItemStatus:
             self.status_combo.addItem(st.label, st.value)
-        if not self.is_edit:
-            self.status_combo.setEnabled(False)
-            self.status_combo.setToolTip("وضعیت پیش‌فرض «فعال» است.")
 
-        status_row = QHBoxLayout()
-        status_row.addWidget(self._make_field("وضعیت", self.status_combo))
-        status_row.addStretch()
-        bv.addLayout(status_row)
+        if self.is_edit:
+            status_row = QHBoxLayout()
+            status_row.addWidget(
+                self._make_field("وضعیت", self.status_combo)
+            )
+            status_row.addStretch()
+            bv.addLayout(status_row)
+        else:
+            self.status_combo.hide()
+            idx = self.status_combo.findData(ItemStatus.ACTIVE.value)
+            if idx >= 0:
+                self.status_combo.setCurrentIndex(idx)
 
         content_layout.addWidget(basic)
 
-        # ── گروه شناسه‌ها و سازنده ──
+        # شناسه‌ها و سازنده
         ids_grp = QGroupBox("شناسه‌ها و سازنده")
         ids_grp.setObjectName("formGroup")
         iv = QVBoxLayout(ids_grp)
         iv.setContentsMargins(14, 20, 14, 14)
         iv.setSpacing(12)
 
-        # شماره قطعه + شماره نقشه
         row2 = QHBoxLayout()
         row2.setSpacing(12)
 
@@ -165,7 +169,6 @@ class ItemFormDialog(QDialog):
         )
         iv.addLayout(row2)
 
-        # سازنده (Lookup) + Part No سازنده
         row3 = QHBoxLayout()
         row3.setSpacing(12)
 
@@ -188,24 +191,18 @@ class ItemFormDialog(QDialog):
 
         content_layout.addWidget(ids_grp)
 
-        # ── گروه مشخصات فنی ──
+        # مشخصات فنی
         tech_grp = QGroupBox("مشخصات فنی")
         tech_grp.setObjectName("formGroup")
         tv = QVBoxLayout(tech_grp)
         tv.setContentsMargins(14, 20, 14, 14)
         tv.setSpacing(12)
 
-        # وزن + گرید متریال (Lookup)
         row4 = QHBoxLayout()
         row4.setSpacing(12)
 
-        self.weight_spin = QDoubleSpinBox()
-        self.weight_spin.setRange(0, 99999)
-        self.weight_spin.setDecimals(4)
-        self.weight_spin.setSpecialValueText("—")
-        self.weight_spin.setSuffix(" kg")
-        self.weight_spin.setMinimumHeight(36)
-        row4.addWidget(self._make_field("وزن", self.weight_spin), 1)
+        self.weight_widget = WeightWidget()
+        row4.addWidget(self._make_field("وزن", self.weight_widget), 1)
 
         self.material_grade_combo = LookupComboBoxWithAdd(
             LookupCategory.MATERIAL_GRADE.value,
@@ -217,7 +214,6 @@ class ItemFormDialog(QDialog):
         )
         tv.addLayout(row4)
 
-        # پوشش/آبکاری (Lookup)
         self.surface_combo = LookupComboBoxWithAdd(
             LookupCategory.SURFACE_TREATMENT.value,
             allow_empty=True,
@@ -229,40 +225,19 @@ class ItemFormDialog(QDialog):
 
         content_layout.addWidget(tech_grp)
 
-        # ── گروه هزینه ──
+        # هزینه استاندارد
         cost_grp = QGroupBox("هزینه استاندارد")
         cost_grp.setObjectName("formGroup")
         cv = QVBoxLayout(cost_grp)
         cv.setContentsMargins(14, 20, 14, 14)
         cv.setSpacing(12)
 
-        cost_row = QHBoxLayout()
-        cost_row.setSpacing(12)
-
-        self.cost_spin = QDoubleSpinBox()
-        self.cost_spin.setRange(0, 999_999_999_999)
-        self.cost_spin.setDecimals(0)
-        self.cost_spin.setSingleStep(10_000)
-        self.cost_spin.setGroupSeparatorShown(True)
-        self.cost_spin.setSpecialValueText("—")
-        self.cost_spin.setMinimumHeight(36)
-        cost_row.addWidget(
-            self._make_field("هزینه واحد", self.cost_spin), 2
-        )
-
-        self.currency_combo = LookupComboBoxWithAdd(
-            LookupCategory.CURRENCY.value,
-        )
-        self.currency_combo.setMinimumHeight(36)
-        self.currency_combo.set_current_code("irr")
-        cost_row.addWidget(
-            self._make_field("ارز", self.currency_combo), 1
-        )
-        cv.addLayout(cost_row)
+        self.money_widget = MoneyWidget()
+        cv.addWidget(self._make_field("هزینه واحد", self.money_widget))
 
         content_layout.addWidget(cost_grp)
 
-        # ── مشخصات فنی (متن) ──
+        # مشخصات فنی متن
         self.spec_input = QTextEdit()
         self.spec_input.setPlaceholderText(
             "مشخصات فنی کامل...\n"
@@ -274,7 +249,7 @@ class ItemFormDialog(QDialog):
             self._make_field("مشخصات فنی", self.spec_input)
         )
 
-        # یادداشت
+        # یادداشت‌ها
         self.notes_input = QTextEdit()
         self.notes_input.setPlaceholderText("یادداشت‌ها...")
         self.notes_input.setMinimumHeight(60)
@@ -361,7 +336,7 @@ class ItemFormDialog(QDialog):
                 )
 
                 if it.weight:
-                    self.weight_spin.setValue(float(it.weight))
+                    self.weight_widget.set_value_kg(float(it.weight))
 
                 if it.material_grade:
                     self.material_grade_combo.set_current_code(
@@ -372,10 +347,11 @@ class ItemFormDialog(QDialog):
                         it.surface_treatment
                     )
 
-                if it.standard_cost:
-                    self.cost_spin.setValue(float(it.standard_cost))
-                if it.currency:
-                    self.currency_combo.set_current_code(it.currency)
+                if it.standard_cost is not None:
+                    self.money_widget.set_amount_and_currency(
+                        float(it.standard_cost),
+                        it.currency or "irr",
+                    )
 
                 if it.specification:
                     self.spec_input.setPlainText(it.specification)
@@ -387,8 +363,10 @@ class ItemFormDialog(QDialog):
             Toast.error(self, f"خطا: {e}")
 
     def _collect_data(self) -> dict:
-        weight_val = self.weight_spin.value()
-        cost_val = self.cost_spin.value()
+        weight_kg = self.weight_widget.get_value_kg()
+        cost_amount, cost_currency = (
+            self.money_widget.get_amount_and_currency()
+        )
 
         return {
             "code": self.code_input.text().strip() or None,
@@ -405,19 +383,15 @@ class ItemFormDialog(QDialog):
             "manufacturer_part_no": (
                 self.mfr_part_no_input.text().strip() or None
             ),
-            "weight": weight_val if weight_val > 0 else None,
+            "weight": weight_kg,
             "material_grade": (
                 self.material_grade_combo.get_current_code() or None
             ),
             "surface_treatment": (
                 self.surface_combo.get_current_code() or None
             ),
-            "standard_cost": (
-                Decimal(str(cost_val)) if cost_val > 0 else None
-            ),
-            "currency": (
-                self.currency_combo.get_current_code() or "irr"
-            ),
+            "standard_cost": cost_amount,
+            "currency": cost_currency,
             "specification": (
                 self.spec_input.toPlainText().strip() or None
             ),
@@ -443,7 +417,6 @@ class ItemFormDialog(QDialog):
                 svc = ItemService(session)
                 if self.is_edit:
                     data["status"] = self.status_combo.currentData()
-                    # کد در ویرایش تغییر نمی‌کنه
                     data.pop("code", None)
                     svc.update(self.item_id, ItemUpdate(**data))
                 else:

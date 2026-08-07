@@ -16,6 +16,7 @@ from app.models.lookup import Lookup
 from app.models.item import Item
 from app.models.device_template import DeviceTemplate
 from app.models.bom import BOMHeader, BOMLine
+from app.models.routing import RoutingHeader, RoutingOperation
 
 __all__ = [
     "User",
@@ -32,4 +33,6 @@ __all__ = [
     "DeviceTemplate",
     "BOMHeader",
     "BOMLine",
+    "RoutingHeader",
+    "RoutingOperation",
 ]

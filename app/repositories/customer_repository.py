@@ -1,6 +1,8 @@
 """
-Repository مشتریان — فقط CRUD، بدون Business Logic
+Kamand - Customer Repository
+عملیات دیتابیس + جستجوی کد آخر برای Auto-code
 """
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.repositories.base_repository import BaseRepository
@@ -15,20 +17,40 @@ class CustomerRepository(BaseRepository[Customer]):
         super().__init__(session, Customer)
 
     def find_by_name(self, name: str) -> Customer | None:
-        """جست‌وجوی دقیق بر اساس نام"""
+        """جست‌وجو دقیق بر اساس نام"""
         return (
             self._session.query(Customer)
             .filter(Customer.name == name)
             .first()
         )
 
+    def find_by_code(self, code: str) -> Customer | None:
+        """جست‌وجو دقیق بر اساس کد"""
+        return (
+            self._session.query(Customer)
+            .filter(Customer.code == code)
+            .first()
+        )
+
+    def get_last_code(self) -> str | None:
+        """آخرین کد ثبت‌شده — برای Auto-code"""
+        result = (
+            self._session.query(Customer.code)
+            .filter(Customer.code.isnot(None))
+            .order_by(desc(Customer.code))
+            .first()
+        )
+        return result[0] if result else None
+
     def search(self, keyword: str) -> list[Customer]:
-        """جست‌وجو در نام، تلفن و ایمیل"""
+        """جست‌وجو در نام، کد، تلفن و ایمیل"""
         kw = f"%{keyword}%"
         return (
             self._session.query(Customer)
             .filter(
                 Customer.name.ilike(kw)
+                | Customer.code.ilike(kw)
+                | Customer.trade_name.ilike(kw)
                 | Customer.phone.ilike(kw)
                 | Customer.mobile.ilike(kw)
                 | Customer.email.ilike(kw)

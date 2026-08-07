@@ -7,7 +7,7 @@ from enum import Enum
 class LookupCategory(str, Enum):
     """دسته‌های Lookup که سیستم می‌شناسد"""
 
-    # ─── تأمین‌کنندگان ───
+    # ─── تأمین‌کننده ───
     SUPPLIER_TYPE           = "supplier_type"
     SUPPLIER_SUBCATEGORY    = "supplier_subcategory"
     SUPPLIER_SPECIALIZATION = "supplier_specialization"
@@ -24,8 +24,9 @@ class LookupCategory(str, Enum):
     ALLOCATION_METHOD       = "allocation_method"
 
     # ─── مشتریان ───
-    CUSTOMER_TYPE           = "customer_type"
 
+    CUSTOMER_TYPE           = "customer_type"
+    CUSTOMER_TIER           = "customer_tier"
     # ─── عملیات ساخت ───
     OPERATION_TYPE          = "operation_type"
     SKILL_LEVEL             = "skill_level"
@@ -41,10 +42,11 @@ class LookupCategory(str, Enum):
     ITEM_TYPE               = "item_type"
     UOM                     = "uom"
 
-    # ─── مشخصات فنی اقلام ───  🆕
+    # ─── مشخصات فنی اقلام ───
     MATERIAL_GRADE          = "material_grade"
     SURFACE_TREATMENT       = "surface_treatment"
     ITEM_MANUFACTURER       = "item_manufacturer"
+    WEIGHT_UNIT             = "weight_unit"
 
     # ─── پروژه ───
     PROJECT_TYPE            = "project_type"
@@ -55,7 +57,7 @@ class LookupCategory(str, Enum):
         mapping = {
             cls.SUPPLIER_TYPE.value:           "نوع تأمین‌کننده",
             cls.SUPPLIER_SUBCATEGORY.value:    "زیرشاخه تأمین‌کننده",
-            cls.SUPPLIER_SPECIALIZATION.value: "جزئیات تخصصی تأمین‌کننده",
+            cls.SUPPLIER_SPECIALIZATION.value: "تخصص تأمین‌کننده",
             cls.SUPPLIER_TIER.value:           "سطح تأمین‌کننده",
             cls.PAYMENT_TERMS.value:           "شرایط پرداخت",
             cls.CURRENCY.value:                "ارز",
@@ -64,6 +66,7 @@ class LookupCategory(str, Enum):
             cls.COST_UNIT.value:               "واحد هزینه",
             cls.ALLOCATION_METHOD.value:       "روش تخصیص هزینه",
             cls.CUSTOMER_TYPE.value:           "نوع مشتری",
+            cls.CUSTOMER_TIER.value:           "سطح مشتری",
             cls.OPERATION_TYPE.value:          "نوع عملیات ساخت",
             cls.SKILL_LEVEL.value:             "سطح مهارت",
             cls.TIME_UNIT.value:               "واحد زمان",
@@ -76,6 +79,7 @@ class LookupCategory(str, Enum):
             cls.MATERIAL_GRADE.value:          "گرید متریال",
             cls.SURFACE_TREATMENT.value:       "نوع پوشش/آبکاری",
             cls.ITEM_MANUFACTURER.value:       "سازنده قطعه",
+            cls.WEIGHT_UNIT.value:             "واحد وزن",
             cls.PROJECT_TYPE.value:            "نوع پروژه",
         }
         return mapping.get(value, value)

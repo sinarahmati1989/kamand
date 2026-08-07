@@ -33,7 +33,7 @@ COLUMNS = [
 ]
 
 ENGINEERING_STEPS = [
-    ("device_templates", "قالب دستگاه"),
+    ("device_templates", "تعریف دستگاه"),
     ("items",            "اقلام"),
     ("bom",              "BOM"),
     ("routing",          "مسیر ساخت"),

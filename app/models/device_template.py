@@ -35,7 +35,6 @@ class DeviceTemplate(Base, TimestampMixin):
         comment="نام دستگاه",
     )
 
-    # نوع دستگاه — Lookup
     template_type = Column(
         String(50), nullable=True,
         comment="کد Lookup نوع دستگاه",
@@ -54,10 +53,9 @@ class DeviceTemplate(Base, TimestampMixin):
         comment="وضعیت",
     )
 
-    description    = Column(Text, nullable=True, comment="توضیحات")
+    description     = Column(Text, nullable=True, comment="توضیحات")
     technical_notes = Column(Text, nullable=True, comment="نکات مهندسی")
 
-    # واحد اندازه‌گیری اصلی — Lookup
     default_uom = Column(
         String(20), nullable=True, default="pcs",
         comment="کد Lookup واحد",
@@ -108,7 +106,13 @@ class DeviceTemplate(Base, TimestampMixin):
         lazy="select",
         cascade="all, delete-orphan",
     )
-    # routing_headers بعداً اضافه میشه وقتی مدل ساخته شد
+    # ⭐ Routing — اضافه شد
+    routing_headers = relationship(
+        "RoutingHeader",
+        back_populates="device_template",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return (

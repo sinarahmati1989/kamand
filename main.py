@@ -13,7 +13,8 @@ from PySide6.QtCore import Qt, QTimer
 
 from app.config.logging_config import setup_logging
 from app.config.theme_loader import apply_theme
-from app.ui.font_manager import FontManager   # 🆕 اضافه شد
+from app.ui.font_manager import FontManager
+from app.ui.widgets.no_wheel_filter import install_no_wheel_filter
 from app.ui.auth.login_window import LoginWindow
 from app.ui.main_window import MainWindow
 from app.constants import BRAND_NAME
@@ -33,7 +34,10 @@ def main():
     app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
     app.setApplicationName(BRAND_NAME)
 
-    # 🆕 راه‌اندازی فونت پیش‌فرض (Vazirmatn)
+    # 🎯 جلوگیری از تغییر ناخواسته Combo/SpinBox با scroll wheel
+    install_no_wheel_filter(app)
+
+    # راه‌اندازی فونت پیش‌فرض (Vazirmatn)
     chosen_font = FontManager.setup(app)
     logger.info(f"فونت پیش‌فرض برنامه: {chosen_font}")
 

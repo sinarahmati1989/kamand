@@ -43,7 +43,7 @@ class BOMService:
 
         if self.header_repo.exists_revision(device_template_id, revision_no):
             raise ValueError(
-                f"Revision {revision_no} برای این قالب دستگاه قبلاً ثبت شده است"
+                f"Revision {revision_no} برای این تعریف دستگاه قبلاً ثبت شده است"
             )
 
         header = BOMHeader(

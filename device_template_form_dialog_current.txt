@@ -1,7 +1,5 @@
 """
-Kamand - DeviceTemplate Form Dialog
 دیالوگ افزودن/ویرایش تعریف دستگاه
-با WeightWidget + SmartSpinBox + فونت درست
 """
 import logging
 
@@ -9,10 +7,9 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QComboBox, QTextEdit,
     QPushButton, QWidget, QGroupBox,
-    QScrollArea, QFrame,
+    QScrollArea, QFrame, QDoubleSpinBox, QSpinBox,
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 
 from app.services.device_template_service import DeviceTemplateService
 from app.schemas.device_template_schema import (
@@ -22,19 +19,17 @@ from app.database.session import get_session
 from app.enums.engineering_enums import DeviceTemplateStatus
 from app.enums.lookup_categories import LookupCategory
 from app.ui.widgets.lookup_combo_with_add import LookupComboBoxWithAdd
-from app.ui.widgets.smart_spinbox import SmartDoubleSpinBox, SmartSpinBox
-from app.ui.widgets.weight_widget import WeightWidget
 from app.ui.widgets.toast import Toast
 
 logger = logging.getLogger(__name__)
 
 
-# واحدهای زمان (به دقیقه ذخیره می‌شه)
+# واحدهای زمان و ضرایب تبدیل به دقیقه
 TIME_UNITS = [
     ("minute", "دقیقه", 1),
     ("hour",   "ساعت",  60),
-    ("day",    "روز",   60 * 8),
-    ("week",   "هفته",  60 * 8 * 5),
+    ("day",    "روز",   60 * 8),      # روز کاری = 8 ساعت
+    ("week",   "هفته",  60 * 8 * 5),  # هفته کاری = 5 روز
 ]
 
 
@@ -63,15 +58,15 @@ class DeviceTemplateFormDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(14)
 
+        # عنوان
         title_text = (
-            "ویرایش تعریف دستگاه"
-            if self.is_edit else "تعریف دستگاه جدید"
+            "ویرایش تعریف دستگاه" if self.is_edit else "تعریف دستگاه جدید"
         )
         title = QLabel(title_text)
         title.setObjectName("pageTitle")
         layout.addWidget(title)
 
-        # کد
+        # ردیف کد
         code_row = QHBoxLayout()
         code_lbl = QLabel("کد دستگاه:")
         code_lbl.setObjectName("fieldLabel")
@@ -86,27 +81,27 @@ class DeviceTemplateFormDialog(QDialog):
             self.code_input.setStyleSheet(
                 "color: #6366F1; font-weight: bold; font-size: 14px;"
                 "padding: 6px 12px; background: rgba(255,255,255,0.85);"
-                "border: 1.5px solid rgba(99,102,241,0.25);"
-                "border-radius: 8px;"
+                "border: 1.5px solid rgba(99,102,241,0.25); border-radius: 8px;"
             )
         code_row.addWidget(code_lbl)
         code_row.addWidget(self.code_input)
         code_row.addStretch()
         layout.addLayout(code_row)
 
-        # اسکرول
+        # محتوا داخل scroll
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(16)
 
-        # ── گروه اطلاعات پایه ──
+        # ── گروه اطلاعات پایه ─────────────────────────────────────
         basic = QGroupBox("اطلاعات پایه")
         basic.setObjectName("formGroup")
         bv = QVBoxLayout(basic)
         bv.setContentsMargins(14, 20, 14, 14)
         bv.setSpacing(12)
 
+        # نام دستگاه
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText(
             "مثال: پمپ هیدرولیک 160 تن — سری آلفا"
@@ -116,6 +111,7 @@ class DeviceTemplateFormDialog(QDialog):
             self._field("نام دستگاه", self.name_input, required=True)
         )
 
+        # نوع دستگاه + Revision
         row1 = QHBoxLayout()
         row1.setSpacing(12)
 
@@ -126,19 +122,17 @@ class DeviceTemplateFormDialog(QDialog):
         self.type_combo.setMinimumHeight(36)
         row1.addWidget(self._field("نوع دستگاه", self.type_combo), 2)
 
-        self.revision_spin = SmartSpinBox()
+        self.revision_spin = QSpinBox()
         self.revision_spin.setRange(1, 99)
         self.revision_spin.setValue(1)
         self.revision_spin.setMinimumHeight(36)
         self.revision_spin.setPrefix("Rev. ")
-        self.revision_spin.setLayoutDirection(
-            Qt.LayoutDirection.LeftToRight
-        )
+        self.revision_spin.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         row1.addWidget(self._field("Revision", self.revision_spin), 1)
 
         bv.addLayout(row1)
 
-        # وضعیت — فقط در حالت ویرایش
+        # وضعیت — فقط در ویرایش
         if self.is_edit:
             self.status_combo = QComboBox()
             self.status_combo.setMinimumHeight(36)
@@ -150,7 +144,7 @@ class DeviceTemplateFormDialog(QDialog):
 
         content_layout.addWidget(basic)
 
-        # ── گروه مشخصات فنی ──
+        # ── گروه مشخصات فنی ───────────────────────────────────────
         tech = QGroupBox("مشخصات فنی")
         tech.setObjectName("formGroup")
         tv = QVBoxLayout(tech)
@@ -160,13 +154,18 @@ class DeviceTemplateFormDialog(QDialog):
         row2 = QHBoxLayout()
         row2.setSpacing(12)
 
-        # وزن تقریبی — WeightWidget
-        self.weight_widget = WeightWidget()
-        row2.addWidget(
-            self._field("وزن تقریبی", self.weight_widget), 1
-        )
+        # ── وزن ────────────────────────────────────────
+        self.weight_spin = QDoubleSpinBox()
+        self.weight_spin.setRange(0, 99999)
+        self.weight_spin.setDecimals(2)
+        self.weight_spin.setSpecialValueText("—")
+        self.weight_spin.setSuffix("  kg")
+        self.weight_spin.setMinimumHeight(36)
+        self.weight_spin.setSingleStep(0.5)
+        self.weight_spin.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        row2.addWidget(self._field("وزن تقریبی", self.weight_spin), 1)
 
-        # زمان ساخت
+        # ── زمان ساخت (با واحد) ───────────────────────
         time_widget = self._build_time_field()
         row2.addWidget(
             self._field("زمان ساخت استاندارد", time_widget), 1
@@ -175,26 +174,35 @@ class DeviceTemplateFormDialog(QDialog):
         tv.addLayout(row2)
         content_layout.addWidget(tech)
 
-        # توضیحات — با فونت Vazirmatn
+        # ── توضیحات ───────────────────────────────────────────────
         self.description_input = QTextEdit()
         self.description_input.setPlaceholderText(
             "توضیحات کلی دستگاه، کاربرد، ویژگی‌های اصلی..."
         )
         self.description_input.setMinimumHeight(75)
         self.description_input.setMaximumHeight(95)
-        self._apply_persian_font(self.description_input)
+        self.description_input.setStyleSheet("""
+            QTextEdit {
+                font-family: "Vazirmatn", "Segoe UI", "B Nazanin";
+                font-size: 13px;
+            }
+        """)
         content_layout.addWidget(
             self._field("توضیحات", self.description_input)
         )
 
-        # نکات مهندسی
         self.tech_notes_input = QTextEdit()
         self.tech_notes_input.setPlaceholderText(
             "نکات مهندسی، استانداردها، محدودیت‌های طراحی..."
         )
         self.tech_notes_input.setMinimumHeight(75)
         self.tech_notes_input.setMaximumHeight(95)
-        self._apply_persian_font(self.tech_notes_input)
+        self.tech_notes_input.setStyleSheet("""
+            QTextEdit {
+                font-family: "Vazirmatn", "Segoe UI", "B Nazanin";
+                font-size: 13px;
+            }
+        """)
         content_layout.addWidget(
             self._field("نکات مهندسی", self.tech_notes_input)
         )
@@ -231,27 +239,17 @@ class DeviceTemplateFormDialog(QDialog):
         btn_row.addWidget(save_btn)
         layout.addLayout(btn_row)
 
-    def _apply_persian_font(self, text_edit: QTextEdit):
-        """فونت Vazirmatn روی QTextEdit — placeholder هم شامل"""
-        font = QFont("Vazirmatn", 10)
-        text_edit.setFont(font)
-        # placeholder هم فونت رو بگیره
-        text_edit.document().setDefaultFont(font)
-
     def _build_time_field(self) -> QWidget:
+        """
+        ساخت فیلد ترکیبی زمان ساخت:
+        [عدد] [واحد: دقیقه/ساعت/روز/هفته]
+        """
         wrapper = QWidget()
         h = QHBoxLayout(wrapper)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(6)
 
-        self.time_unit_combo = QComboBox()
-        self.time_unit_combo.setMinimumHeight(36)
-        self.time_unit_combo.setFixedWidth(90)
-        for code, label, _ in TIME_UNITS:
-            self.time_unit_combo.addItem(label, code)
-        self.time_unit_combo.setCurrentIndex(1)  # پیش‌فرض: ساعت
-
-        self.time_value_spin = SmartDoubleSpinBox()
+        self.time_value_spin = QDoubleSpinBox()
         self.time_value_spin.setRange(0, 99999)
         self.time_value_spin.setDecimals(2)
         self.time_value_spin.setSpecialValueText("—")
@@ -261,8 +259,16 @@ class DeviceTemplateFormDialog(QDialog):
             Qt.LayoutDirection.LeftToRight
         )
 
-        h.addWidget(self.time_unit_combo, 1)
+        self.time_unit_combo = QComboBox()
+        self.time_unit_combo.setMinimumHeight(36)
+        self.time_unit_combo.setFixedWidth(90)
+        for code, label, _ in TIME_UNITS:
+            self.time_unit_combo.addItem(label, code)
+        # پیش‌فرض: ساعت (خیلی معمول‌تره)
+        self.time_unit_combo.setCurrentIndex(1)
+
         h.addWidget(self.time_value_spin, 2)
+        h.addWidget(self.time_unit_combo, 1)
         return wrapper
 
     def _field(
@@ -281,13 +287,23 @@ class DeviceTemplateFormDialog(QDialog):
         v.addWidget(widget)
         return wrapper
 
+    # ── تبدیل واحد زمان ────────────────────────────────────────────
+
     def _get_time_multiplier(self, unit_code: str) -> int:
+        """گرفتن ضریب تبدیل واحد زمان به دقیقه"""
         for code, _, mult in TIME_UNITS:
             if code == unit_code:
                 return mult
         return 1
 
     def _minutes_to_best_unit(self, minutes: int) -> tuple[float, str]:
+        """
+        تبدیل دقیقه به بهترین واحد نمایش:
+        - < 60 دقیقه → دقیقه
+        - < 8 ساعت → ساعت
+        - < 5 روز → روز
+        - بقیه → هفته
+        """
         if minutes < 60:
             return (minutes, "minute")
         elif minutes < 60 * 8:
@@ -318,12 +334,10 @@ class DeviceTemplateFormDialog(QDialog):
                     if idx >= 0:
                         self.status_combo.setCurrentIndex(idx)
 
-                # وزن به kg در DB ذخیره است
                 if t.estimated_weight:
-                    self.weight_widget.set_value_kg(
-                        float(t.estimated_weight)
-                    )
+                    self.weight_spin.setValue(float(t.estimated_weight))
 
+                # زمان ساخت: تبدیل از دقیقه به بهترین واحد
                 if t.estimated_cycle_time:
                     value, unit = self._minutes_to_best_unit(
                         t.estimated_cycle_time
@@ -344,8 +358,9 @@ class DeviceTemplateFormDialog(QDialog):
             Toast.error(self, f"خطا: {e}")
 
     def _collect(self) -> dict:
-        weight_kg = self.weight_widget.get_value_kg()
+        weight_val = self.weight_spin.value()
 
+        # تبدیل زمان به دقیقه
         time_val = self.time_value_spin.value()
         time_unit = self.time_unit_combo.currentData()
         cycle_minutes = None
@@ -358,7 +373,7 @@ class DeviceTemplateFormDialog(QDialog):
             "name":                 self.name_input.text().strip(),
             "template_type":        self.type_combo.get_current_code() or None,
             "revision_no":          self.revision_spin.value(),
-            "estimated_weight":     weight_kg,
+            "estimated_weight":     weight_val if weight_val > 0 else None,
             "estimated_cycle_time": cycle_minutes,
             "description":          self.description_input.toPlainText().strip() or None,
             "technical_notes":      self.tech_notes_input.toPlainText().strip() or None,
@@ -385,10 +400,7 @@ class DeviceTemplateFormDialog(QDialog):
                     if self.status_combo:
                         data["status"] = self.status_combo.currentData()
                     data.pop("code", None)
-                    svc.update(
-                        self.template_id,
-                        DeviceTemplateUpdate(**data),
-                    )
+                    svc.update(self.template_id, DeviceTemplateUpdate(**data))
                 else:
                     svc.create(DeviceTemplateCreate(**data))
 
