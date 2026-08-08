@@ -22,6 +22,8 @@ PySide6_Essentials==6.7.2
 pytest==8.3.3
 pytest-qt==4.4.0
 python-dotenv==1.0.1
+QtAwesome==1.4.2
+QtPy==2.4.3
 shiboken6==6.7.2
 SQLAlchemy==2.0.35
 typing_extensions==4.16.0
