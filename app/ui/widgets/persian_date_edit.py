@@ -1,21 +1,26 @@
 """
 PersianDateEdit — Widget انتخاب تاریخ شمسی
 ────────────────────────────────────────────
-• نمایش: 1403/08/15
+• نمایش: 1405/08/15
 • Popup calendar شمسی با ماه‌ها و روزهای فارسی
 • استایل هماهنگ با Aurora Glass Light
 • ذخیره داخلی: datetime.date میلادی (استاندارد)
+• کوچک و هوشمند (خودش موقعیت بهینه رو پیدا می‌کنه)
 """
 from datetime import date
 from typing import Optional
+import logging
 import jdatetime
 
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
     QLineEdit, QPushButton, QLabel, QDialog,
-    QComboBox, QSizePolicy
+    QComboBox,
 )
 from PySide6.QtCore import Qt, Signal, QPoint
+from PySide6.QtGui import QGuiApplication
+
+logger = logging.getLogger(__name__)
 
 
 # ══════════════════════════════════════════════════════════
@@ -29,7 +34,6 @@ PERSIAN_MONTHS = [
 ]
 
 PERSIAN_WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"]
-# ترتیب هفته شمسی: شنبه، یکشنبه، ..., جمعه
 
 
 # ══════════════════════════════════════════════════════════
@@ -37,9 +41,9 @@ PERSIAN_WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"]
 # ══════════════════════════════════════════════════════════
 
 class PersianCalendarPopup(QDialog):
-    """پنجره Popup تقویم شمسی"""
+    """پنجره Popup تقویم شمسی — کوچک و کاربردی"""
 
-    date_selected = Signal(object)  # jdatetime.date
+    date_selected = Signal(object)  # jdatetime.date or None
 
     def __init__(self, current_jdate: jdatetime.date, parent=None):
         super().__init__(parent)
@@ -58,7 +62,7 @@ class PersianCalendarPopup(QDialog):
         self._apply_style()
         self._render_days()
 
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
 
     def _setup_ui(self):
         outer = QVBoxLayout(self)
@@ -70,16 +74,16 @@ class PersianCalendarPopup(QDialog):
         outer.addWidget(self._card)
 
         root = QVBoxLayout(self._card)
-        root.setContentsMargins(12, 12, 12, 12)
-        root.setSpacing(8)
+        root.setContentsMargins(10, 10, 10, 10)
+        root.setSpacing(6)
 
-        # ── هدر: سال/ماه با دکمه‌های ناوبری ──
+        # ── هدر: سال/ماه ──
         header = QHBoxLayout()
-        header.setSpacing(6)
+        header.setSpacing(4)
 
-        self.prev_btn = QPushButton("▶")
+        self.prev_btn = QPushButton("‹")
         self.prev_btn.setObjectName("calNavBtn")
-        self.prev_btn.setFixedSize(28, 28)
+        self.prev_btn.setFixedSize(24, 24)
         self.prev_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.prev_btn.clicked.connect(self._on_prev_month)
 
@@ -98,9 +102,9 @@ class PersianCalendarPopup(QDialog):
         self.year_combo.setCurrentText(str(self._display_year))
         self.year_combo.currentIndexChanged.connect(self._on_year_changed)
 
-        self.next_btn = QPushButton("◀")
+        self.next_btn = QPushButton("›")
         self.next_btn.setObjectName("calNavBtn")
-        self.next_btn.setFixedSize(28, 28)
+        self.next_btn.setFixedSize(24, 24)
         self.next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.next_btn.clicked.connect(self._on_next_month)
 
@@ -117,7 +121,7 @@ class PersianCalendarPopup(QDialog):
             lbl = QLabel(wd)
             lbl.setObjectName("calWeekday")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setFixedSize(34, 26)
+            lbl.setFixedSize(26, 20)
             weekdays_row.addWidget(lbl)
         root.addLayout(weekdays_row)
 
@@ -126,17 +130,19 @@ class PersianCalendarPopup(QDialog):
         self.days_grid.setSpacing(2)
         root.addLayout(self.days_grid)
 
-        # ── دکمه امروز ──
+        # ── دکمه امروز/پاک ──
         footer = QHBoxLayout()
+        footer.setSpacing(6)
+
         self.today_btn = QPushButton("امروز")
         self.today_btn.setObjectName("calTodayBtn")
-        self.today_btn.setFixedHeight(30)
+        self.today_btn.setFixedHeight(26)
         self.today_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.today_btn.clicked.connect(self._on_today)
 
-        self.clear_btn = QPushButton("پاک کردن")
+        self.clear_btn = QPushButton("پاک")
         self.clear_btn.setObjectName("calClearBtn")
-        self.clear_btn.setFixedHeight(30)
+        self.clear_btn.setFixedHeight(26)
         self.clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.clear_btn.clicked.connect(self._on_clear)
 
@@ -144,22 +150,21 @@ class PersianCalendarPopup(QDialog):
         footer.addWidget(self.clear_btn)
         root.addLayout(footer)
 
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
 
     def _apply_style(self):
         self.setStyleSheet("""
-
             QWidget#calCard {
                 background-color: #FFFFFF;
                 border: 1px solid rgba(99, 102, 241, 0.3);
-                border-radius: 12px;
+                border-radius: 10px;
             }
 
             QPushButton#calNavBtn {
                 background-color: rgba(99, 102, 241, 0.1);
                 color: #6366F1;
                 border: none;
-                border-radius: 6px;
+                border-radius: 5px;
                 font-size: 14px;
                 font-weight: bold;
             }
@@ -171,16 +176,16 @@ class PersianCalendarPopup(QDialog):
                 background-color: #F8FAFC;
                 color: #1E293B;
                 border: 1px solid #E2E8F0;
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 13px;
+                border-radius: 5px;
+                padding: 3px 6px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 12px;
                 font-weight: 600;
-                min-height: 26px;
+                min-height: 22px;
             }
             QComboBox#calCombo::drop-down {
                 border: none;
-                width: 20px;
+                width: 18px;
             }
             QComboBox#calCombo QAbstractItemView {
                 background-color: white;
@@ -192,9 +197,9 @@ class PersianCalendarPopup(QDialog):
             QLabel#calWeekday {
                 background-color: #EDE9FE;
                 color: #6366F1;
-                border-radius: 4px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 12px;
+                border-radius: 3px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 11px;
                 font-weight: bold;
             }
 
@@ -203,13 +208,13 @@ class PersianCalendarPopup(QDialog):
                 color: #1E293B;
                 border: none;
                 border-radius: 4px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 12px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 11px;
                 font-weight: 500;
-                min-width: 34px;
-                min-height: 30px;
-                max-width: 34px;
-                max-height: 30px;
+                min-width: 26px;
+                min-height: 22px;
+                max-width: 26px;
+                max-height: 22px;
             }
             QPushButton#calDay:hover {
                 background-color: rgba(99, 102, 241, 0.15);
@@ -221,13 +226,13 @@ class PersianCalendarPopup(QDialog):
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 12px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 11px;
                 font-weight: bold;
-                min-width: 34px;
-                min-height: 30px;
-                max-width: 34px;
-                max-height: 30px;
+                min-width: 26px;
+                min-height: 22px;
+                max-width: 26px;
+                max-height: 22px;
             }
 
             QPushButton#calDayToday {
@@ -235,33 +240,27 @@ class PersianCalendarPopup(QDialog):
                 color: #6366F1;
                 border: 1px solid #6366F1;
                 border-radius: 4px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 12px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 11px;
                 font-weight: bold;
-                min-width: 34px;
-                min-height: 30px;
-                max-width: 34px;
-                max-height: 30px;
+                min-width: 26px;
+                min-height: 22px;
+                max-width: 26px;
+                max-height: 22px;
             }
             QPushButton#calDayToday:hover {
                 background-color: rgba(99, 102, 241, 0.25);
-            }
-
-            QLabel#calEmpty {
-                background: transparent;
-                min-width: 34px;
-                min-height: 30px;
             }
 
             QPushButton#calTodayBtn {
                 background-color: #6366F1;
                 color: white;
                 border: none;
-                border-radius: 6px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 12px;
+                border-radius: 5px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 11px;
                 font-weight: bold;
-                padding: 0 12px;
+                padding: 0 10px;
             }
             QPushButton#calTodayBtn:hover {
                 background-color: #4F46E5;
@@ -271,22 +270,20 @@ class PersianCalendarPopup(QDialog):
                 background-color: #F1F5F9;
                 color: #64748B;
                 border: 1px solid #CBD5E1;
-                border-radius: 6px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
-                font-size: 12px;
+                border-radius: 5px;
+                font-family: "Vazirmatn", sans-serif;
+                font-size: 11px;
                 font-weight: 600;
-                padding: 0 12px;
+                padding: 0 10px;
             }
             QPushButton#calClearBtn:hover {
                 background-color: #E2E8F0;
             }
-
         """)
 
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
 
     def _clear_grid(self):
-        """پاک کردن همه ویجت‌های grid"""
         while self.days_grid.count():
             item = self.days_grid.takeAt(0)
             w = item.widget()
@@ -294,19 +291,16 @@ class PersianCalendarPopup(QDialog):
                 w.deleteLater()
 
     def _render_days(self):
-        """ساخت گرید روزهای ماه"""
         self._clear_grid()
 
-        # روز اول ماه
         first_day = jdatetime.date(self._display_year, self._display_month, 1)
-        first_weekday = first_day.weekday()  # 0=شنبه ... 6=جمعه
+        first_weekday = first_day.weekday()
 
-        # تعداد روزهای ماه
         if self._display_month <= 6:
             days_in_month = 31
         elif self._display_month <= 11:
             days_in_month = 30
-        else:  # اسفند
+        else:
             days_in_month = 30 if jdatetime.date(self._display_year, 1, 1).isleap() else 29
 
         today = jdatetime.date.today()
@@ -317,7 +311,6 @@ class PersianCalendarPopup(QDialog):
             btn = QPushButton(str(day))
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-            # تعیین استایل روز
             is_selected = (
                 day == self._current.day and
                 self._display_month == self._current.month and
@@ -344,9 +337,9 @@ class PersianCalendarPopup(QDialog):
                 col = 0
                 row += 1
 
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
     # Handlers
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
 
     def _on_day_clicked(self, day: int):
         selected = jdatetime.date(self._display_year, self._display_month, day)
@@ -406,14 +399,14 @@ class PersianCalendarPopup(QDialog):
 class PersianDateEdit(QWidget):
     """
     ویجت انتخاب تاریخ شمسی
-    
+
     Usage:
         de = PersianDateEdit()
         de.set_date(date(2024, 11, 5))
         gregorian = de.get_date()  # datetime.date یا None
     """
 
-    date_changed = Signal(object)  # datetime.date یا None
+    date_changed = Signal(object)
 
     def __init__(self, parent=None, allow_empty: bool = True):
         super().__init__(parent)
@@ -427,7 +420,7 @@ class PersianDateEdit(QWidget):
         if not allow_empty:
             self.set_today()
 
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
 
     def _setup_ui(self):
         layout = QHBoxLayout(self)
@@ -454,7 +447,6 @@ class PersianDateEdit(QWidget):
 
     def _apply_style(self):
         self.setStyleSheet("""
-
             QLineEdit#pdeDisplay {
                 background-color: white;
                 color: #1E293B;
@@ -464,7 +456,7 @@ class PersianDateEdit(QWidget):
                 border-top-left-radius: 0px;
                 border-bottom-left-radius: 0px;
                 padding: 6px 10px;
-                font-family: "Segoe UI", "B Nazanin", sans-serif;
+                font-family: "Vazirmatn", sans-serif;
                 font-size: 13px;
             }
             QLineEdit#pdeDisplay:focus {
@@ -484,22 +476,50 @@ class PersianDateEdit(QWidget):
             QPushButton#pdeBtn:hover {
                 background-color: #4F46E5;
             }
-
         """)
 
-    # ──────────────────────────────────────────────
-    # Popup
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
+    # Popup — با موقعیت هوشمند
+    # ─────────────────────────────────────────────
 
     def _open_popup(self):
-        current = self._current or jdatetime.date.today()
-        popup = PersianCalendarPopup(current, self)
-        popup.date_selected.connect(self._on_date_selected)
+        try:
+            current = self._current or jdatetime.date.today()
+            popup = PersianCalendarPopup(current, self)
+            popup.date_selected.connect(self._on_date_selected)
 
-        # موقعیت popup: زیر ویجت
-        pos = self.mapToGlobal(QPoint(0, self.height() + 2))
-        popup.move(pos)
-        popup.exec()
+            # سایز واقعی popup را قبل از نمایش محاسبه کن
+            popup.adjustSize()
+            popup_size = popup.sizeHint()
+            popup_h = popup_size.height() if popup_size.height() > 0 else 300
+            popup_w = popup_size.width() if popup_size.width() > 0 else 240
+
+            # موقعیت پیش‌فرض: زیر ویجت
+            pos_below = self.mapToGlobal(QPoint(0, self.height() + 4))
+            pos_above = self.mapToGlobal(QPoint(0, -popup_h - 4))
+
+            screen = QGuiApplication.primaryScreen().availableGeometry()
+
+            # اگر پایین جا نیست، بالای ویجت
+            if pos_below.y() + popup_h > screen.bottom():
+                pos = pos_above
+                # اگر بالا هم جا نیست، بچسبان به پایین صفحه
+                if pos.y() < screen.top():
+                    pos.setY(screen.top() + 10)
+            else:
+                pos = pos_below
+
+            # تنظیم افقی
+            if pos.x() + popup_w > screen.right():
+                pos.setX(screen.right() - popup_w - 10)
+            if pos.x() < screen.left():
+                pos.setX(screen.left() + 10)
+
+            popup.move(pos)
+            popup.exec()
+
+        except Exception as e:
+            logger.error(f"خطا در باز کردن تقویم: {e}", exc_info=True)
 
     def _on_date_selected(self, jdate: Optional[jdatetime.date]):
         if jdate is None:
@@ -509,7 +529,6 @@ class PersianDateEdit(QWidget):
             self._current = jdate
             self._update_display()
 
-        # emit میلادی
         greg = self.get_date()
         self.date_changed.emit(greg)
 
@@ -518,12 +537,11 @@ class PersianDateEdit(QWidget):
             text = f"{self._current.year:04d}/{self._current.month:02d}/{self._current.day:02d}"
             self.display.setText(text)
 
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
     # Public API
-    # ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────
 
     def set_date(self, greg_date: Optional[date]):
-        """تنظیم تاریخ (ورودی: میلادی)"""
         if greg_date is None:
             self._current = None
             self.display.setText("")
@@ -532,17 +550,14 @@ class PersianDateEdit(QWidget):
             self._update_display()
 
     def get_date(self) -> Optional[date]:
-        """برگرداندن تاریخ به میلادی (برای ذخیره در DB)"""
         if self._current is None:
             return None
         return self._current.togregorian()
 
     def set_today(self):
-        """تنظیم به امروز"""
         self._current = jdatetime.date.today()
         self._update_display()
 
     def clear(self):
-        """پاک کردن تاریخ"""
         self._current = None
         self.display.setText("")

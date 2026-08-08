@@ -1,21 +1,53 @@
+# ═══ venv (جدا از پروژه) ═══
 venv/
+env/
+.venv/
+
+# ═══ Python ═══
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
+*.so
+*.egg-info/
+*.egg
+.pytest_cache/
 
+# ═══ Environment ═══
+.env
+.env.local
+
+# ═══ IDE ═══
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ═══ OS ═══
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ═══ Logs ═══
 logs/
 *.log
 
-.env
-.idea/
-.vscode/
-
+# ═══ Database Dumps ═══
 *.dump
 *.bak
 *.sqlite3
 
+# ═══ Alembic Cache ═══
+app/database/migrations/versions/__pycache__/
+
+# ═══ Temp/Test Files ═══
 run_seed.py
 FILE_DUMP.txt
+temp/
+tmp/
+*.tmp
 
-app/database/migrations/versions/__pycache__/
+# ═══ Build/Dist ═══
+build/
+dist/
+*.spec

@@ -1,6 +1,6 @@
 """
 Kamand - Models Package
-همه مدل‌ها برای Alembic و استفاده عمومی
+برای شناسایی مدل‌ها توسط Alembic و استفاده عمومی
 """
 
 from app.models.user import User
@@ -17,6 +17,8 @@ from app.models.item import Item
 from app.models.device_template import DeviceTemplate
 from app.models.bom import BOMHeader, BOMLine
 from app.models.routing import RoutingHeader, RoutingOperation
+from app.models.project import Project, ProjectDevice, ProjectCost
+from app.models.system_settings import SystemSetting
 
 __all__ = [
     "User",
@@ -35,4 +37,8 @@ __all__ = [
     "BOMLine",
     "RoutingHeader",
     "RoutingOperation",
+    "Project",
+    "ProjectDevice",
+    "ProjectCost",
+    "SystemSetting",
 ]

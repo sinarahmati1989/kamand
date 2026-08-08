@@ -116,22 +116,37 @@ class LookupManagementPage(QWidget):
     def _build_actions(self) -> QHBoxLayout:
         row = QHBoxLayout()
 
-        edit_btn = QPushButton("✏️  ویرایش")
+        # دکمه‌های جابجایی
+        up_btn = QPushButton("↑  بالا")
+        up_btn.setObjectName("secondaryButton")
+        up_btn.setFixedWidth(100)
+        up_btn.setToolTip("انتقال به بالا")
+        up_btn.clicked.connect(self._on_move_up)
+
+        down_btn = QPushButton("↓  پایین")
+        down_btn.setObjectName("secondaryButton")
+        down_btn.setFixedWidth(100)
+        down_btn.setToolTip("انتقال به پایین")
+        down_btn.clicked.connect(self._on_move_down)
+
+        edit_btn = QPushButton("✏  ویرایش")
         edit_btn.setObjectName("secondaryButton")
         edit_btn.setFixedWidth(130)
         edit_btn.clicked.connect(self._on_edit_selected)
 
-        toggle_btn = QPushButton("🔄  فعال/غیرفعال")
+        toggle_btn = QPushButton("🔁  فعال/غیرفعال")
         toggle_btn.setObjectName("warningButton")
         toggle_btn.setFixedWidth(150)
         toggle_btn.clicked.connect(self._on_toggle_selected)
 
-        delete_btn = QPushButton("🗑️  حذف")
+        delete_btn = QPushButton("🗑  حذف")
         delete_btn.setObjectName("warningButton")
         delete_btn.setFixedWidth(110)
         delete_btn.clicked.connect(self._on_delete_selected)
 
         row.addStretch()
+        row.addWidget(up_btn)
+        row.addWidget(down_btn)
         row.addWidget(edit_btn)
         row.addWidget(toggle_btn)
         row.addWidget(delete_btn)
@@ -321,3 +336,38 @@ class LookupManagementPage(QWidget):
             Toast.warning(self, "یک گزینه انتخاب کنید")
             return
         self._on_delete(lid)
+
+
+    def _on_move_up(self):
+        lid = self._table.get_selected_id()
+        if lid is None:
+            Toast.warning(self, "یک گزینه انتخاب کنید")
+            return
+        try:
+            with get_session() as session:
+                svc = LookupService(session)
+                svc.move_up(lid)
+            Toast.success(self, "به بالا منتقل شد")
+            self.refresh()
+        except ValueError as e:
+            Toast.warning(self, str(e))
+        except Exception as e:
+            logger.error(f"خطا در جابجایی: {e}", exc_info=True)
+            Toast.error(self, f"خطا: {e}")
+
+    def _on_move_down(self):
+        lid = self._table.get_selected_id()
+        if lid is None:
+            Toast.warning(self, "یک گزینه انتخاب کنید")
+            return
+        try:
+            with get_session() as session:
+                svc = LookupService(session)
+                svc.move_down(lid)
+            Toast.success(self, "به پایین منتقل شد")
+            self.refresh()
+        except ValueError as e:
+            Toast.warning(self, str(e))
+        except Exception as e:
+            logger.error(f"خطا در جابجایی: {e}", exc_info=True)
+            Toast.error(self, f"خطا: {e}")

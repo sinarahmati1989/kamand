@@ -21,9 +21,9 @@ class LookupService:
         self.session = session
         self.repo = LookupRepository(session)
 
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
     # Read
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
 
     def get_by_id(self, lookup_id: int) -> Lookup:
         lookup = self.repo.get_by_id(lookup_id)
@@ -51,7 +51,7 @@ class LookupService:
         """
         نگاشت code به label برای یه دسته
         (برای نمایش سریع در جدول‌ها)
-        
+
         مثال: {"manufacturer": "تولیدکننده", ...}
         """
         items = self.repo.get_by_category(
@@ -65,9 +65,9 @@ class LookupService:
     def get_all_categories(self) -> List[str]:
         return self.repo.get_all_categories()
 
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
     # Create
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
 
     def create(self, data: LookupCreate, is_system: bool = False) -> Lookup:
         """ایجاد Lookup جدید"""
@@ -78,7 +78,7 @@ class LookupService:
                 f"گزینه‌ای با کد «{data.code}» در دسته «{data.category}» قبلاً ثبت شده"
             )
 
-        # بررسی معتبر بودن parent (اگه داشت)
+        # بررسی معتبر بودن parent (اگر داشت)
         if data.parent_id is not None:
             parent = self.repo.get_by_id(data.parent_id)
             if not parent:
@@ -101,9 +101,9 @@ class LookupService:
         logger.info(f"✅ Lookup ایجاد شد: {data.category}/{data.code} — {data.label_fa}")
         return lookup
 
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
     # Update
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
 
     def update(self, lookup_id: int, data: LookupUpdate) -> Lookup:
         """ویرایش Lookup"""
@@ -127,9 +127,9 @@ class LookupService:
         logger.info(f"✅ Lookup ویرایش شد: {lookup.category}/{lookup.code}")
         return lookup
 
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
     # Delete
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
 
     def delete(self, lookup_id: int) -> None:
         """حذف Lookup"""
@@ -150,7 +150,7 @@ class LookupService:
             )
 
         self.repo.delete(lookup)
-        logger.info(f"🗑️ Lookup حذف شد: {lookup.category}/{lookup.code}")
+        logger.info(f"🗑 Lookup حذف شد: {lookup.category}/{lookup.code}")
 
     def toggle_active(self, lookup_id: int) -> Lookup:
         """تغییر وضعیت فعال/غیرفعال"""
@@ -160,12 +160,92 @@ class LookupService:
         self.session.refresh(lookup)
 
         status = "فعال" if lookup.is_active else "غیرفعال"
-        logger.info(f"🔄 وضعیت {lookup.category}/{lookup.code}: {status}")
+        logger.info(f"🔁 وضعیت {lookup.category}/{lookup.code}: {status}")
         return lookup
 
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
+    # Move (جابجایی ترتیب) — نسخه بهبود یافته
+    # ─────────────────────────────────────────────
+
+    def _normalize_sort_orders(self, category: str, parent_id: Optional[int] = None):
+        """
+        بازچینش sort_order آیتم‌ها با فاصله 10 (10, 20, 30, ...)
+        تا از تصادم و مقادیر تکراری جلوگیری شه
+        """
+        items = self.repo.get_by_category(
+            category,
+            active_only=False,
+            parent_id=parent_id,
+            include_children=False,
+        )
+        # مرتب‌سازی فعلی
+        items = sorted(items, key=lambda x: (x.sort_order or 0, x.id))
+
+        # بازچینش با فاصله 10
+        for i, item in enumerate(items):
+            item.sort_order = (i + 1) * 10
+
+        self.session.flush()
+        return items
+
+    def move_up(self, lookup_id: int) -> Lookup:
+        """جابجایی به بالا"""
+        lookup = self.get_by_id(lookup_id)
+
+        # اول ترتیب رو normalize کن
+        items = self._normalize_sort_orders(lookup.category, lookup.parent_id)
+
+        # پیدا کردن index
+        try:
+            idx = next(i for i, x in enumerate(items) if x.id == lookup_id)
+        except StopIteration:
+            raise ValueError("آیتم در لیست پیدا نشد")
+
+        if idx == 0:
+            raise ValueError("این آیتم قبلاً در بالای لیست است")
+
+        upper = items[idx - 1]
+
+        # swap
+        temp = lookup.sort_order
+        lookup.sort_order = upper.sort_order
+        upper.sort_order = temp
+
+        self.session.flush()
+        self.session.refresh(lookup)
+        self.session.refresh(upper)
+        logger.info(f"⬆ Lookup منتقل شد بالا: {lookup.category}/{lookup.code}")
+        return lookup
+
+    def move_down(self, lookup_id: int) -> Lookup:
+        """جابجایی به پایین"""
+        lookup = self.get_by_id(lookup_id)
+
+        items = self._normalize_sort_orders(lookup.category, lookup.parent_id)
+
+        try:
+            idx = next(i for i, x in enumerate(items) if x.id == lookup_id)
+        except StopIteration:
+            raise ValueError("آیتم در لیست پیدا نشد")
+
+        if idx >= len(items) - 1:
+            raise ValueError("این آیتم قبلاً در انتهای لیست است")
+
+        lower = items[idx + 1]
+
+        temp = lookup.sort_order
+        lookup.sort_order = lower.sort_order
+        lower.sort_order = temp
+
+        self.session.flush()
+        self.session.refresh(lookup)
+        self.session.refresh(lower)
+        logger.info(f"⬇ Lookup منتقل شد پایین: {lookup.category}/{lookup.code}")
+        return lookup
+
+    # ─────────────────────────────────────────────
     # Seed (بارگذاری داده‌های اولیه)
-    # ══════════════════════════════════════════════════════════════
+    # ─────────────────────────────────────────────
 
     def seed_if_not_exists(
         self,
@@ -178,7 +258,7 @@ class LookupService:
         description: Optional[str] = None,
     ) -> Lookup:
         """
-        اگه آیتم وجود نداره ایجاد کن، وگرنه همون رو برگردون
+        اگر آیتم وجود نداره ایجاد کن، وگرنه همون رو برگردون
         (برای seed کردن داده‌های سیستمی)
         """
         existing = self.repo.get_by_category_code(category, code)
@@ -193,7 +273,7 @@ class LookupService:
             parent_id=parent_id,
             sort_order=sort_order,
             is_active=True,
-            is_system=True,  # ← داده‌های seed شده system هستن
+            is_system=True,
             description=description,
         )
         self.repo.add(lookup)

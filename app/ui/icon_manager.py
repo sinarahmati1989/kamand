@@ -12,20 +12,20 @@ logger = logging.getLogger(__name__)
 class IconManager:
     """مدیریت آیکون‌های پروژه با Material Design Icons"""
 
-    # ─── رنگ‌های استاندارد پروژه ───
-    COLOR_PRIMARY   = "#6366F1"   # Indigo
-    COLOR_SECONDARY = "#64748B"   # Slate gray
-    COLOR_MUTED     = "#94A3B8"   # Light gray
-    COLOR_ACTIVE    = "#FFFFFF"   # White (روی پس‌زمینه indigo)
-    COLOR_DANGER    = "#EF4444"   # Red
-    COLOR_SUCCESS   = "#10B981"   # Green
-    COLOR_WARNING   = "#F59E0B"   # Orange
+    # ═══ رنگ‌های استاندارد پروژه ═══
+    COLOR_PRIMARY   = "#6366F1"
+    COLOR_SECONDARY = "#64748B"
+    COLOR_MUTED     = "#94A3B8"
+    COLOR_ACTIVE    = "#FFFFFF"
+    COLOR_DANGER    = "#EF4444"
+    COLOR_SUCCESS   = "#10B981"
+    COLOR_WARNING   = "#F59E0B"
 
-    # ─── نگاشت آیکون‌های سایدبار ───
+    # ═══ نگاشت آیکون‌های سایدبار ═══
     ICONS = {
         # داشبورد
         "dashboard":        "mdi.view-dashboard-outline",
-        
+
         # داده‌های پایه
         "base_data":        "mdi.database-outline",
         "customers":        "mdi.account-group-outline",
@@ -34,31 +34,31 @@ class IconManager:
         "operations":       "mdi.hammer-wrench",
         "departments":      "mdi.office-building-outline",
         "work_centers":     "mdi.factory",
-        "machines":         "mdi.robot-industrial-outline",
-        
+        "machines":         "mdi.robot-industrial",          # ✅ رفع باگ
+
         # مهندسی دستگاه
         "engineering":      "mdi.cog-outline",
         "device_templates": "mdi.file-cog-outline",
         "items":            "mdi.package-variant-closed",
         "bom":              "mdi.file-tree-outline",
         "routing":          "mdi.source-branch",
-        
+
         # عملیات
         "operations_group": "mdi.chart-timeline-variant",
         "projects":         "mdi.clipboard-list-outline",
         "purchases":        "mdi.cart-outline",
-        
+
         # گزارش‌ها
         "reports":          "mdi.chart-line",
         "profit":           "mdi.chart-bar",
         "prj_report":       "mdi.chart-donut",
-        
+
         # سیستم
         "system":           "mdi.shield-account-outline",
         "users":            "mdi.account-multiple-outline",
         "lookups":          "mdi.tune-variant",
         "settings":         "mdi.cog",
-        
+
         # عمومی
         "logout":           "mdi.logout",
         "user":             "mdi.account-circle-outline",
@@ -88,6 +88,16 @@ class IconManager:
         "eye":              "mdi.eye-outline",
         "eye_off":          "mdi.eye-off-outline",
         "lock":             "mdi.lock-outline",
+
+        # پروژه — آیکون‌های جدید
+        "project":          "mdi.clipboard-list-outline",
+        "project_device":   "mdi.devices",
+        "calendar":         "mdi.calendar-outline",
+        "contract":         "mdi.file-sign",
+        "money":            "mdi.cash",
+        "status":           "mdi.list-status",
+        "copy":             "mdi.content-copy",
+        "expand":           "mdi.arrow-expand",
     }
 
     @classmethod
@@ -99,14 +109,14 @@ class IconManager:
     ) -> QIcon:
         """
         دریافت آیکون با نام کوتاه
-        
+
         مثال:
             IconManager.get("home", color="#6366F1")
             IconManager.get("save", color=IconManager.COLOR_PRIMARY)
         """
         mdi_name = cls.ICONS.get(name)
         if not mdi_name:
-            logger.warning(f"⚠️ آیکون '{name}' یافت نشد")
+            logger.warning(f"⚠ آیکون '{name}' یافت نشد")
             mdi_name = "mdi.help-circle-outline"
 
         try:
@@ -119,7 +129,11 @@ class IconManager:
             return qta.icon(mdi_name, **options)
         except Exception as e:
             logger.error(f"خطا در بارگذاری آیکون '{name}': {e}")
-            return QIcon()
+            # fallback به آیکون ساده
+            try:
+                return qta.icon("mdi.help-circle-outline", color=color or cls.COLOR_PRIMARY)
+            except Exception:
+                return QIcon()
 
     @classmethod
     def get_by_mdi(cls, mdi_name: str, color: str = None) -> QIcon:

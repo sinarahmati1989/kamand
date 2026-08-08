@@ -464,6 +464,7 @@ class MainWindow(QMainWindow):
         from app.ui.items.item_list_page import ItemListPage
         from app.ui.bom.bom_page import BOMPage
         from app.ui.routing.routing_page import RoutingPage
+        from app.ui.projects.project_list_page import ProjectListPage
 
         self.register_page("dashboard",        DashboardPage())
         self.register_page("users",            UserListPage())
@@ -479,6 +480,7 @@ class MainWindow(QMainWindow):
         self.register_page("items",            ItemListPage())
         self.register_page("bom",              BOMPage())
         self.register_page("routing",          RoutingPage())
+        self.register_page("projects",         ProjectListPage())
 
         for key, title in self.PAGE_TITLES.items():
             if key in self._pages:
